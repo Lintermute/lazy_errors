@@ -18,8 +18,6 @@ fn run() -> Result<()>
 
     errs.into() // `Ok(())` if `errs` was still empty, `Err` otherwise
 }
-#
-#
 
 let errs = run().unwrap_err();
 assert_eq!(errs.childs().len(), 2);
