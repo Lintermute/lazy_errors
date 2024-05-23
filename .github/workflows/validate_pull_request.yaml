@@ -46,15 +46,15 @@ jobs:
       # seemed to trigger a deadlock in Git or GitHub here.
       run: git fetch --no-tags --prune --unshallow origin
 
-    - name: Install stable Rust toolchain with clippy
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-
     - name: Install nightly Rust toolchain with rustfmt and miri
       uses: dtolnay/rust-toolchain@nightly
       with:
         components: rustfmt, miri
+
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
 
     - name: Install cargo-hack
       uses: taiki-e/install-action@v2
