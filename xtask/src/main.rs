@@ -350,6 +350,7 @@ fn build(is_release: bool) -> CommandLine
         "--feature-powerset",
         "--optional-deps",
         "--all-targets",
+        "--exclude=xtask",
     ];
 
     if is_release {
@@ -505,7 +506,7 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
-                "--all-targets"],
+                "--all-targets", "--exclude=xtask"],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
@@ -526,7 +527,7 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
-                "--all-targets", "--release"],
+                "--all-targets", "--exclude=xtask", "--release"],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
@@ -558,7 +559,7 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
-                "--all-targets"],
+                "--all-targets", "--exclude=xtask"],
 
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
@@ -575,7 +576,7 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
-                "--all-targets", "--release"],
+                "--all-targets", "--exclude=xtask", "--release"],
         ]; "stable tasklist")]
     fn transform_args_to_tasks(
         args: &[&str],
