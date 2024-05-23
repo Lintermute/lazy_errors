@@ -26,7 +26,7 @@ on:
 jobs:
   check_each_commit:
     name: check each commit
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ${{ matrix.system }}
 
     strategy:
