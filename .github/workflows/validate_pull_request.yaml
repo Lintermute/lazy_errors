@@ -67,6 +67,11 @@ jobs:
       with:
         tool: cargo-hack
 
+    - name: Install cargo-audit
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-audit
+
     # FIXME: `xtask` modifies and deletes binaries in `target`, even its own.
     # FIXME: This is not possible on Windows, so install it before running it.
     # FIXME: Run tarpaulin regularly when it works on stable again.
