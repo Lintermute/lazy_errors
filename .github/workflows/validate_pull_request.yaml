@@ -64,8 +64,11 @@ jobs:
       with:
         tool: cargo-hack
 
+    # FIXME: `xtask` modifies and deletes binaries in `target`, even its own.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    # FIXME: Run tarpaulin regularly when it works on stable again.
     - name: Check each commit added by this PR
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo xtask ci'
+        --exec 'cargo xtask ci --skip-tarpaulin'
