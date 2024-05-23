@@ -79,4 +79,5 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo xtask ci --skip-tarpaulin'
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci --skip-tarpaulin'
