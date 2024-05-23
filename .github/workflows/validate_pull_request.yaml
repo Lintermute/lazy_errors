@@ -54,6 +54,9 @@ jobs:
       with:
         components: rustfmt, miri
 
+    - name: Setup MIRI
+      run: cargo +nightly miri setup
+
     - name: Install stable Rust toolchain with clippy
       uses: dtolnay/rust-toolchain@stable
       with:
