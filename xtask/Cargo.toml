@@ -1,0 +1,17 @@
+[package]
+name = "xtask"
+version = "0.0.0"
+edition = "2021"
+authors = ["Andreas Waidler <lintermute@mailbox.org>"]
+license = "MIT"
+publish = false
+
+[dependencies]
+clap = { version = "4.3.21", features = ["derive"] }
+
+# clap needs the FromStr implementations to return std::error::Error.
+# Furthermore, we need to be able to wrap errors from std::fs.
+lazy_errors = { path = "../lazy_errors", features = ["std"] }
+
+[dev-dependencies]
+test-case = "3.1.0"

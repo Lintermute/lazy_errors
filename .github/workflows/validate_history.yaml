@@ -1,0 +1,54 @@
+# Checks if all past commits pass the CI quality gate `cargo xtask ci`,
+# excluding moving targets (such as clippy or `cargo audit`).
+
+name: Validate Commit History
+
+on:
+  schedule:
+    #        ┌───────────── minute (0 - 59)
+    #        │ ┌───────────── hour (0 - 23)
+    #        │ │ ┌───────────── day of the month (1 - 31)
+    #        │ │ │ ┌───────────── month (1 - 12 or JAN-DEC)
+    #        │ │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    - cron: '0 0 * * MON'
+
+jobs:
+  check_each_commit:
+    name: check each commit
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        branch: [ dev/0.1, pub/0.1 ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Install nightly Rust toolchain with rustfmt and miri
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt, miri
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    - name: Checking all commits on ${{ matrix.branch }}
+      run: >
+        git rebase
+        --root
+        --exec 'cargo xtask ci --skip-moving-targets'

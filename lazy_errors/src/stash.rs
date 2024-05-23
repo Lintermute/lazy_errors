@@ -1,0 +1,368 @@
+// Copyright (c) 2024 Andreas Waidler
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+use alloc::{
+    boxed::Box,
+    fmt::{Debug, Display},
+    string::{String, ToString},
+    vec::Vec,
+};
+
+use crate::{
+    error::{self, Location},
+    Error,
+};
+
+/// A builder for [`Error`] that keeps a list of errors
+/// which may still be empty, along with a message that summarizes
+/// all errors that end up in the list.
+///
+/// The generic type parameter `F` is a function or closure that
+/// will create the error summary message lazily.
+/// It will be called when converting the [`ErrorStash`] into `Result`.
+/// The generic type parameter `M` is the result returned from `F`,
+/// i.e. the type of the error summary message itself.
+/// The generic type parameter `I` is the
+/// [_inner error type_ of `Error`](Error#inner-error-type-i).
+///
+/// Essentially, this type is a builder for something similar to
+/// `Result<(), Vec<Error>>`. Errors can be added by calling
+/// [`push`](Self::push) or by calling methods from the
+/// [`OrStash`] trait on `Result`.
+/// When you're done collecting the errors, the [`ErrorStash`] can be
+/// transformed into `Result<(), Error>` (via [`From`]/[`Into`]),
+/// where [`Error`] basically wraps a [`Vec<Error>`]
+/// along with a message that summarizes all errors in that list.
+#[cfg_attr(
+    feature = "eyre",
+    doc = r##"
+There's also [`IntoEyreResult`](crate::IntoEyreResult)
+which performs a (lossy) conversion to
+[`eyre::Result`](color_eyre::eyre::Result).
+"##
+)]
+/// ```
+/// use lazy_errors::prelude::*;
+///
+/// let errs = ErrorStash::new(|| "Something went wrong");
+/// assert_eq!(&format!("{errs}"), "Stash of 0 errors currently");
+/// let r: Result<(), Error> = errs.into();
+/// assert!(r.is_ok());
+///
+/// let mut errs = ErrorStash::new(|| "Something went wrong");
+/// errs.push("This is an error message");
+/// assert_eq!(&format!("{errs}"), "Stash of 1 errors currently");
+///
+/// errs.push("Yet another error message");
+/// assert_eq!(&format!("{errs}"), "Stash of 2 errors currently");
+///
+/// let r: Result<(), Error> = errs.into();
+/// let err = r.unwrap_err();
+///
+/// assert_eq!(&format!("{err}"), "Something went wrong (2 errors)");
+///
+/// let printed = format!("{err:#}");
+/// let printed = lazy_errors::replace_line_numbers(&printed);
+/// assert_eq!(printed, indoc::indoc! {"
+///     Something went wrong
+///     - This is an error message
+///       at lazy_errors/src/stash.rs:1234:56
+///     - Yet another error message
+///       at lazy_errors/src/stash.rs:1234:56"});
+/// ```
+///
+/// If you do not want to create an empty [`ErrorStash`] before adding errors,
+/// you can use [`or_create_stash`] which will
+/// create a [`StashWithErrors`] when an error actually occurs.
+///
+/// [`OrStash`]: crate::OrStash
+/// [`or_create_stash`]: crate::OrCreateStash::or_create_stash
+pub enum ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+{
+    Empty(F),
+    WithErrors(StashWithErrors<I>),
+}
+
+/// A builder for [`Error`] that keeps a list of one or more errors,
+/// along with a message that summarizes all errors that end up in the list.
+///
+/// The generic type parameter `I` is the
+/// [_inner error type_ of `Error`](Error#inner-error-type-i).
+///
+/// This type is similar to [`ErrorStash`] except that an [`ErrorStash`]
+/// may be empty. Since [`StashWithErrors`] contains at least one error,
+/// guaranteed by the type system at compile time, this type implements
+/// `Into<Error>` as well as `IntoEyreReport` which returns `eyre::Report`
+/// (instead of `Into<Result>` or `IntoEyreResult`).
+/// Please note that the conversion to `eyre::Report` is lossy.
+#[derive(Debug)]
+pub struct StashWithErrors<I>
+{
+    summary:   Box<str>,
+    errors:    Vec<I>,
+    locations: Vec<Location>,
+}
+
+impl<F, M, I> Debug for ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+    I: Debug,
+{
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    {
+        match self {
+            Self::Empty(_) => write!(f, "ErrorStash(Empty)"),
+            Self::WithErrors(errs) => {
+                write!(f, "ErrorStash(")?;
+                Debug::fmt(errs, f)?;
+                write!(f, ")")?;
+                Ok(())
+            },
+        }
+    }
+}
+
+impl<F, M, I> Display for ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+{
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    {
+        match self {
+            Self::Empty(_) => display::<I>(f, &[]),
+            Self::WithErrors(errs) => Display::fmt(errs, f),
+        }
+    }
+}
+
+impl<I> Display for StashWithErrors<I>
+{
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    {
+        display(f, self.errors())
+    }
+}
+
+impl<F, M, I> From<ErrorStash<F, M, I>> for Result<(), Error<I>>
+where
+    F: FnOnce() -> M,
+    M: Display,
+{
+    fn from(stash: ErrorStash<F, M, I>) -> Self
+    {
+        match stash {
+            ErrorStash::Empty(_) => Ok(()),
+            ErrorStash::WithErrors(stash) => Err(stash.into()),
+        }
+    }
+}
+
+impl<I> From<StashWithErrors<I>> for Error<I>
+{
+    fn from(stash: StashWithErrors<I>) -> Self
+    {
+        Error::from_stash(stash.summary, stash.errors, stash.locations)
+    }
+}
+
+impl<F, M, I> ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+{
+    /// Creates a new [`ErrorStash`] with a “lazy” error summary message
+    /// that will be evaluated when the first error (if any) is added
+    /// to the stash.
+    pub fn new(f: F) -> Self
+    {
+        Self::Empty(f)
+    }
+
+    /// Adds an error into the stash.
+    #[track_caller]
+    pub fn push<E>(&mut self, err: E)
+    where E: Into<I>
+    {
+        // We need to move out of `&mut self`
+        // because we want to call `f()` which is `FnOnce()`.
+
+        let mut swap = Self::WithErrors(StashWithErrors {
+            summary:   String::new().into_boxed_str(),
+            errors:    vec![],
+            locations: vec![],
+        });
+
+        core::mem::swap(self, &mut swap);
+
+        let stash_with_errors = match swap {
+            ErrorStash::Empty(f) => StashWithErrors::from(f(), err),
+            ErrorStash::WithErrors(mut stash) => {
+                stash.push(err);
+                stash
+            },
+        };
+
+        *self = ErrorStash::WithErrors(stash_with_errors);
+    }
+
+    /// Returns `true` if the stash is empty.
+    ///
+    /// ```
+    /// use lazy_errors::prelude::*;
+    ///
+    /// let mut errs = ErrorStash::new(|| "Summary message");
+    /// assert!(errs.is_empty());
+    ///
+    /// errs.push("First error");
+    /// assert!(!errs.is_empty());
+    /// ```
+    pub fn is_empty(&self) -> bool
+    {
+        match self {
+            ErrorStash::Empty(_) => true,
+            ErrorStash::WithErrors(_) => false,
+        }
+    }
+
+    /// Returns all errors that have been put into this stash so far.
+    ///
+    /// ```
+    /// type ErrorStash<F, M> = lazy_errors::ErrorStash<F, M, i32>;
+    ///
+    /// let mut errs = ErrorStash::new(|| "Summary message");
+    /// assert_eq!(errs.errors(), &[]);
+    ///
+    /// errs.push(42);
+    /// errs.push(-1);
+    /// errs.push(1337);
+    /// assert_eq!(errs.errors(), &[42, -1, 1337]);
+    /// ```
+    ///
+    /// Note that this method only returns errors that have been
+    /// put into this stash _directly_.
+    /// When you're using [`prelude::ErrorStash`](crate::prelude::ErrorStash),
+    /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
+    /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
+    /// storing another level of errors.
+    /// Such transitive childs will _not_ be returned from this method.
+    pub fn errors(&self) -> &[I]
+    {
+        match self {
+            ErrorStash::Empty(_) => &[],
+            ErrorStash::WithErrors(stash) => stash.errors(),
+        }
+    }
+}
+
+impl<I> StashWithErrors<I>
+{
+    /// Creates a [`StashWithErrors`] that contains a single error so far;
+    /// that error and errors added in the future are summarized by
+    /// the supplied message.
+    #[track_caller]
+    pub fn from<M, E>(summary: M, error: E) -> Self
+    where
+        M: Display,
+        E: Into<I>,
+    {
+        Self {
+            summary:   summary.to_string().into(),
+            errors:    vec![error.into()],
+            locations: vec![error::location()],
+        }
+    }
+
+    /// Adds an error into the stash.
+    #[track_caller]
+    pub fn push<E>(&mut self, err: E)
+    where E: Into<I>
+    {
+        self.errors.push(err.into());
+        self.locations.push(error::location());
+    }
+
+    /// Returns all errors that have been put into this stash so far.
+    ///
+    /// Note that this method only returns errors that have been
+    /// put into this stash _directly_.
+    /// When you're using [`prelude::ErrorStash`](crate::prelude::ErrorStash),
+    /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
+    /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
+    /// storing another level of errors.
+    /// Such transitive childs will _not_ be returned from this method.
+    pub fn errors(&self) -> &[I]
+    {
+        &self.errors
+    }
+}
+
+fn display<I>(
+    f: &mut alloc::fmt::Formatter<'_>,
+    errors: &[I],
+) -> alloc::fmt::Result
+{
+    let count = errors.len();
+    write!(f, "Stash of {count} errors currently")
+}
+
+#[cfg(test)]
+mod tests
+{
+    use crate::prelude::*;
+
+    #[test]
+    fn stash_debug_fmt_when_empty()
+    {
+        let errs = ErrorStash::new(|| "Mock message");
+
+        assert_eq!(format!("{errs:?}"), "ErrorStash(Empty)");
+    }
+
+    #[test]
+    fn stash_debug_fmt_with_errors()
+    {
+        let mut errs = ErrorStash::new(|| "Mock message");
+        errs.push("First error");
+        errs.push(Error::from_message("Second error"));
+
+        #[cfg(feature = "eyre")]
+        errs.push(color_eyre::eyre::eyre!("Third error"));
+
+        let msg = format!("{errs:?}");
+        dbg!(&msg);
+
+        assert!(msg.contains("ErrorStash"));
+        assert!(msg.contains("StashWithErrors"));
+
+        assert!(msg.contains("First error"));
+        assert!(msg.contains("Second error"));
+
+        #[cfg(feature = "eyre")]
+        assert!(msg.contains("Third error"));
+
+        assert!(msg.contains("lazy_errors"));
+        assert!(msg.contains("stash.rs"));
+    }
+}

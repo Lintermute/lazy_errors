@@ -1,0 +1,221 @@
+# Runs the CI quality gate: compilation, linting, testing, dependency checking,
+# and so on. Parallel implementation of the steps defined in the `xtasks` crate.
+
+name: Validate Git HEAD
+
+on:
+
+  push:
+    branches:
+      - '**'
+
+  # Ensure we find out if the build breaks, e.g. due to new clippy lints.
+  schedule:
+    #        ┌───────────── minute (0 - 59)
+    #        │ ┌───────────── hour (0 - 23)
+    #        │ │ ┌───────────── day of the month (1 - 31)
+    #        │ │ │ ┌───────────── month (1 - 12 or JAN-DEC)
+    #        │ │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    - cron: '0 0 * * *'
+
+jobs:
+
+  # Determine the branch names on which to run the actual jobs below.
+  init:
+    timeout-minutes: 1
+    runs-on: ubuntu-latest
+
+    outputs:
+      branches: ${{ steps.set_branches.outputs.branches }}
+
+    steps:
+    - id: set_branches
+      name: "Determine branches to check"
+      run: |
+        case "${{ github.event_name }}" in
+            "push")     branches="[ \"$GITHUB_REF_NAME\" ]" ;;
+            "schedule") branches="[ \"dev/0.1\", \"pub/0.1\" ]" ;;
+            *)
+                echo "Unknown event: ${{ github.event_name }}" >&2
+                exit 1
+        esac
+        echo "branches=$branches" >> $GITHUB_OUTPUT
+
+  rustfmt:
+    needs: init
+    timeout-minutes: 1
+
+    # Results should be the same on all systems. Use the fastest/cheapest one.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install nightly Rust toolchain with rustfmt
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt
+
+    - name: rustfmt
+      run: cargo +nightly --locked fmt --check --all
+
+  build:
+    name: build & test
+    needs: init
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+        profile: [ dev, release ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    # Use individual steps so we get a nice overview in the GitHub UI.
+
+    - name: Run clippy
+      run: >
+        cargo hack clippy
+        --locked --workspace --feature-powerset --optional-deps
+        --all-targets --profile ${{ matrix.profile }} -- -Dwarnings
+
+    # Run tests early to fail ASAP. Note that `cargo test` is faster than
+    # `cargo tarpaulin` and has a nicer UI.
+
+    - name: Run tests
+      run: >
+        cargo hack test
+        --locked --workspace --feature-powerset --optional-deps
+        --profile ${{ matrix.profile }}
+
+    - name: Build docs
+      run: >
+        cargo doc --locked --workspace --all-features
+        --no-deps --profile ${{ matrix.profile}}
+      env:
+        RUSTDOCFLAGS: -Dwarnings
+
+    - name: Build artifacts
+      run: >
+        cargo hack build
+        --locked --workspace --feature-powerset --optional-deps
+        --all-targets --profile ${{ matrix.profile}}
+
+  coverage:
+    needs: init
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest ]
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+        profile: [ dev, release ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    # FIXME: Remove nightly once tarpaulin can run doctests on stable again
+    - name: Install nightly Rust toolchain
+      uses: dtolnay/rust-toolchain@nightly
+
+    - name: Install cargo-tarpaulin
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-tarpaulin
+
+    - name: Check coverage
+      run: >
+        cargo tarpaulin
+        --locked --workspace
+        --all-features --all-targets --doc --no-fail-fast
+        --profile ${{ matrix.profile}}
+
+  miri:
+    needs: init
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install nightly Rust toolchain with miri
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: miri
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    - name: Run MIRI tests
+      run: >
+        cargo +nightly hack miri test
+        --locked --workspace --feature-powerset --optional-deps
+
+  # To keep load on the servers low, we'll defer checking dependencies
+  # until we're more sure we did not introduce other problems.
+  deps:
+    needs: init
+    timeout-minutes: 5
+
+    # Results should be the same on all systems. Use the fastest one.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Check for dependency updates
+      run: cargo --locked update
+
+    - name: Check for security issues
+      run: cargo --locked audit --deny warnings

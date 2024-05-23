@@ -1,0 +1,25 @@
+[package]
+name = "lazy_errors"
+description = "Effortlessly create, group, and nest arbitrary errors, and defer error handling ergonomically."
+version = "0.1.0"
+edition = "2021"
+readme = "../README.md"
+authors = ["Andreas Waidler <lintermute@mailbox.org>"]
+repository = "https://github.com/Lintermute/lazy_errors"
+license = "MIT"
+publish = false
+
+[features]
+eyre = ["std", "dep:color-eyre"]
+std = []
+
+[package.metadata."docs.rs"]
+all-features = true
+
+[dependencies]
+color-eyre = { version = "0.6.2", optional = true }
+
+[dev-dependencies]
+indoc = "2.0.5"
+test-case = "3.1.0"
+thiserror = "1.0.56"

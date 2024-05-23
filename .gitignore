@@ -1,0 +1,5 @@
+/.vscode
+/target
+/tarpaulin-report-dev/tarpaulin-report.html
+/tarpaulin-report-release/tarpaulin-report.html
+/tarpaulin-report.html
