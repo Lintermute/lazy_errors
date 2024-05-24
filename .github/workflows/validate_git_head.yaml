@@ -116,7 +116,8 @@ jobs:
 
     - name: Build docs
       run: >
-        cargo doc --locked --workspace --all-features
+        cargo hack doc
+        --locked --workspace --feature-powerset --optional-deps
         --no-deps --profile ${{ matrix.profile}}
       env:
         RUSTDOCFLAGS: -Dwarnings

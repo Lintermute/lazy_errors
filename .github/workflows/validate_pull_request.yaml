@@ -26,7 +26,7 @@ on:
 jobs:
   check_each_commit:
     name: check each commit
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ${{ matrix.system }}
 
     strategy:
@@ -34,6 +34,9 @@ jobs:
         system: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
+
+    # Avoid linter errors due to changed line endings
+    - run: git config --global core.autocrlf false
 
     - uses: actions/checkout@v4
       with:
@@ -46,23 +49,35 @@ jobs:
       # seemed to trigger a deadlock in Git or GitHub here.
       run: git fetch --no-tags --prune --unshallow origin
 
-    - name: Install stable Rust toolchain with clippy
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-
     - name: Install nightly Rust toolchain with rustfmt and miri
       uses: dtolnay/rust-toolchain@nightly
       with:
         components: rustfmt, miri
+
+    - name: Setup MIRI
+      run: cargo +nightly miri setup
+
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
 
     - name: Install cargo-hack
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack
 
+    - name: Install cargo-audit
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-audit
+
+    # FIXME: `xtask` modifies and deletes binaries in `target`, even its own.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    # FIXME: Run tarpaulin regularly when it works on stable again.
     - name: Check each commit added by this PR
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo xtask ci'
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci --skip-tarpaulin'
