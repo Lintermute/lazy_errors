@@ -208,7 +208,7 @@ checksum = "f8478577c03552c21db0e2724ffb8986a5ce7af88107e6be5d2ee6e158c12800"
 
 [[package]]
 name = "lazy_errors"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "color-eyre",
  "indoc",
