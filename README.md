@@ -218,5 +218,408 @@ fn cleanup() -> Result<(), Error>
 `Result` and `Error`, respectively. A similar, albeit lossy,
 conversion from `ErrorStash` and `StashWithErrors` exist for
 `eyre::Result` and `eyre::Error` (i.e. `eyre::Report`), namely
+`into_eyre_result`(IntoEyreResult::into_eyre_result) and
+`into_eyre_report`(IntoEyreReport::into_eyre_report):
+
+```rust
+use eyre::bail;
+use lazy_errors::prelude::*;
+
+fn main()
+{
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = lazy_errors::replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run
+        - Input is not ASCII: '❌'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Cleanup failed
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
+
+fn run() -> Result<(), eyre::Report>
+{
+    let r = write("❌").or_create_stash::<Stashable>(|| "Failed to run");
+    match r {
+        Ok(()) => Ok(()),
+        Err(mut stash) => {
+            cleanup().or_stash(&mut stash);
+            bail!(stash.into_eyre_report());
+        },
+    }
+}
+
+fn write(text: &str) -> Result<(), Error>
+{
+    if !text.is_ascii() {
+        return Err(err!("Input is not ASCII: '{text}'"));
+    }
+    Ok(())
+}
+
+fn cleanup() -> Result<(), Error>
+{
+    Err(err!("Cleanup failed"))
+}
+```
+
+#### Example: Hierarchies
+
+As you might have noticed, `Error`s form hierarchies:
+
+```rust
+use lazy_errors::prelude::*;
+
+fn main()
+{
+    let err = first().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = lazy_errors::replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        In first(): second() failed
+        - In second(): third() failed
+          - In third(): There were errors
+            - First error
+              at lazy_errors/src/lib.rs:1234:56
+            - Second error
+              at lazy_errors/src/lib.rs:1234:56
+            at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
+
+fn first() -> Result<(), Error>
+{
+    let mut stash = ErrorStash::new(|| "In first(): second() failed");
+    stash.push(second().unwrap_err());
+    stash.into()
+}
+
+fn second() -> Result<(), Error>
+{
+    let mut stash = ErrorStash::new(|| "In second(): third() failed");
+    stash.push(third().unwrap_err());
+    stash.into()
+}
+
+fn third() -> Result<(), Error>
+{
+    let mut stash = ErrorStash::new(|| "In third(): There were errors");
+
+    stash.push("First error");
+    stash.push("Second error");
+
+    stash.into()
+}
+```
+
+The example above may seem unwieldy. In fact, that example only serves
+the purpose to illustrate the error hierarchy.
+In practice, you wouldn't write such code.
+Instead, you'd probably rely on `or_wrap` or `or_wrap_with`.
+
+#### Example: Wrapping
+
+You can use `or_wrap` or `or_wrap_with` to wrap any value
+that can be converted into the
+[_inner error type_ of `Error`](Error#inner-error-type-i)
+or to attach some context to an error:
+
+```rust
+use lazy_errors::{prelude::*, Result};
+
+fn main()
+{
+    let err = first().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = lazy_errors::replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Something went wrong: In third(): There were errors
+        - First error
+          at lazy_errors/src/lib.rs:1234:56
+        - Second error
+          at lazy_errors/src/lib.rs:1234:56
+        at lazy_errors/src/lib.rs:1234:56
+        at lazy_errors/src/lib.rs:1234:56"});
+}
+
+fn first() -> Result<(), Error>
+{
+    second().or_wrap_with(|| "Something went wrong")
+}
+
+fn second() -> Result<()>
+{
+    third().or_wrap() // Wrap it “silently”: No message, just file location
+}
+
+fn third() -> Result<()>
+{
+    let mut stash = ErrorStash::new(|| "In third(): There were errors");
+
+    stash.push("First error");
+    stash.push("Second error");
+
+    stash.into()
+}
+```
+
+#### Example: Ad-Hoc Errors
+
+The `err!` macro allows you to format a string
+and turn it into an ad-hoc `Error` at the same time:
+
+```rust
+use lazy_errors::{prelude::*, Result};
+
+let pid = 42;
+let err: Error = err!("Error in process {pid}");
+```
+
+You'll often find ad-hoc errors to be the leaves in an error tree.
+However, the error tree can have almost any _inner error type_ as leaf.
+
+#### Supported Error Types
+
+The `prelude` module exports commonly used traits and _aliased_ types.
+Importing `prelude::*` should set you up for most use-cases.
+You may also want to import `lazy_errors::Result`(crate::Result).
+When you're using the aliased types from the prelude, this crate should
+support any `Result<_, E>` if `E` implements `Into<``Stashable``>`.
+`Stashable` is, basically, a `Box<dyn E>`, where `E` is either
+`std::error::Error` or a similar trait in `#![no_std]` mode.
+Thus, using the aliased types from the prelude, any error you put into
+any of the containers defined by this crate will be boxed.
+The `Into<Box<dyn E>>` trait bound was chosen because it is implemented
+for a wide range of error types or _“error-like”_ types.
+Some examples of types that satisfy this constraint are:
+
+- `&str`
+- `String`
+- `eyre::Report`
+- `anyhow::Error`
+- `std::error::Error`
+- All error types from this crate
+
+The primary error type from this crate is `Error`.
+You can convert all supported _error-like_ types into `Error`
+by calling `or_wrap` or `or_wrap_with`:
+
+```rust
+use lazy_errors::prelude::*;
+
+fn main()
+{
+    let err = parent().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = lazy_errors::replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        In parent(): child() failed: Arbitrary String
+        at lazy_errors/src/lib.rs:1234:56"});
+}
+
+fn parent() -> Result<(), Error>
+{
+    child().or_wrap_with(|| "In parent(): child() failed")
+}
+
+fn child() -> Result<(), String>
+{
+    Err(String::from("Arbitrary String"))
+}
+```
+
+In other words, this crate supports a wide variety of error types.
+However, in some cases you might need a different kind of flexibility
+than that. For example, maybe you don't want to lose static error type
+information or maybe your error types aren't `Sync`.
+In general, this crate should work well with any `Result<_, E>`
+if `E` implements `Into<I>` where `I` is named the
+[_inner error type_ of `Error`](Error#inner-error-type-i).
+This crate will store errors as type `I` in its containers, for example
+in `ErrorStash` or in `Error`. When you're using the type aliases
+from the `prelude`, `I` will always be `Stashable`.
+However, you do not need to use `Stashable` at all.
+The concrete type to use for `I` may be chosen by the user arbitrarily.
+It can be a custom type and does not need to implement any traits
+or auto traits except `Sized`.
+Thus, if the default aliases defined in the prelude
+do not suit your purpose, you can import the required traits
+and types manually and define custom aliases, as shown below.
+
+#### Example: Custom Error Types
+
+Here's a complex example that does not use the `prelude`
+but instead defines its own aliases.
+These error types have their static type information still present,
+enabling running recovery logic without having to rely on downcasts
+at run-time. The example also shows how such custom error types
+can still be used alongside the boxed error types (`Stashable`s)
+with custom lifetimes.
+
+```rust
+use std::str::FromStr;
+
+use lazy_errors::{
+    err,
+    Error,
+    ErrorStash,
+    OrStash,
+    Result,
+    Stashable,
+    StashedResult,
+};
+
+#[derive(thiserror::Error, Debug)]
+pub enum CustomError<'a>
+{
+    #[error("Input is empty")]
+    EmptyInput,
+
+    #[error("Input '{0}' is not u32")]
+    NotU32(&'a str),
+}
+
+// Use `CustomError` as `I` for both `Error` and `ErrorStash`:
+type ParserError<'a> = Error<CustomError<'a>>;
+type ParserStash<'a, F, M> = ErrorStash<F, M, CustomError<'a>>;
+
+fn main()
+{
+    let err = run(&["42", "0xA", "f", "oobar", "3b"]).unwrap_err();
+    eprintln!("{err:#}");
+}
+
+fn run<'a>(input: &[&'a str]) -> Result<(), Error<Stashable<'a>>>
+{
+    let mut errs = ErrorStash::new(|| "Application failed");
+
+    let parser_result = parse_input(input); // Soft errors
+    if let Err(e) = parser_result {
+        println!("There were errors.");
+        println!("Errors will be returned after showing some suggestions.");
+        let recovery_result = handle_parser_errors(&e); // Hard errors
+        errs.push(e);
+        if let Err(e) = recovery_result {
+            errs.push(e);
+            return errs.into();
+        }
+    }
+
+    // ... some related work, such as writing log files ...
+
+    errs.into()
+}
+
+fn parse_input<'a>(input: &[&'a str]) -> Result<(), ParserError<'a>>
+{
+    if input.is_empty() {
+        return Err(Error::wrap(CustomError::EmptyInput));
+    }
+
+    let mut errs = ParserStash::new(|| {
+        "Input has correctable or uncorrectable errors"
+    });
+
+    println!("Step #1: Starting...");
+
+    let mut parsed = vec![];
+    for s in input {
+        println!("Step #1: Trying to parse '{s}'");
+        // Ignore “soft” errors for now...
+        if let StashedResult::Ok(k) = parse_u32(s).or_stash(&mut errs) {
+            parsed.push(k);
+        }
+    }
+
+    println!(
+        "Step #1: Done. {} of {} inputs were u32 (decimal or hex): {:?}",
+        parsed.len(),
+        input.len(),
+        parsed
+    );
+
+    errs.into() // Return list of all parser errors, if any
+}
+
+fn handle_parser_errors(errs: &ParserError) -> Result<()>
+{
+    println!("Step #2: Starting...");
+
+    for e in errs.childs() {
+        match e {
+            CustomError::NotU32(input) => guess_hex(input)?,
+            other => return Err(err!("Internal error: {other}")),
+        };
+    }
+
+    println!("Step #2: Done");
+
+    Ok(())
+}
+
+fn parse_u32(s: &str) -> Result<u32, CustomError>
+{
+    s.strip_prefix("0x")
+        .map(|hex| u32::from_str_radix(hex, 16))
+        .unwrap_or_else(|| u32::from_str(s))
+        .map_err(|_| CustomError::NotU32(s))
+}
+
+fn guess_hex(s: &str) -> Result<u32>
+{
+    match u32::from_str_radix(s, 16) {
+        Ok(v) => {
+            println!("Step #2: '{s}' is not u32. Did you mean '{v:#X}'?");
+            Ok(v)
+        },
+        Err(e) => {
+            println!("Step #2: '{s}' is not u32. Aborting program.");
+            Err(err!("Unsupported input '{s}': {e}"))
+        },
+    }
+}
+```
+
+Running the example above will produce an output similar to this:
+
+```
+stdout:
+Step #1: Starting...
+Step #1: Trying to parse '42'
+Step #1: Trying to parse '0xA'
+Step #1: Trying to parse 'f'
+Step #1: Trying to parse 'oobar'
+Step #1: Trying to parse '3b'
+Step #1: Done. 2 of 5 inputs were u32 (decimal or hex): [42, 10]
+There were errors.
+Errors will be returned after showing some suggestions.
+Step #2: Starting...
+Step #2: 'f' is not u32. Did you mean '0xF'?
+Step #2: 'oobar' is not u32. Aborting program.
+
+stderr:
+Application failed
+- Input has correctable or uncorrectable errors
+  - Input 'f' is not u32
+    at lazy_errors/src/lib.rs:72:52
+  - Input 'oobar' is not u32
+    at lazy_errors/src/lib.rs:72:52
+  - Input '3b' is not u32
+    at lazy_errors/src/lib.rs:72:52
+  at lazy_errors/src/lib.rs:43:14
+- Unsupported input 'oobar': invalid digit found in string
+  at lazy_errors/src/lib.rs:120:17
+  at lazy_errors/src/lib.rs:45:18
+```
+
+`or_stash`: crate::OrStash::or_stash
+`or_create_stash`: crate::OrCreateStash::or_create_stash
+`or_wrap`: crate::OrWrap::or_wrap
+`or_wrap_with`: crate::OrWrapWith::or_wrap_with
+
+---
 
 License: MIT
