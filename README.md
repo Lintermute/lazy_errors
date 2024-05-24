@@ -218,8 +218,8 @@ fn cleanup() -> Result<(), Error>
 `Result` and `Error`, respectively. A similar, albeit lossy,
 conversion from `ErrorStash` and `StashWithErrors` exist for
 `eyre::Result` and `eyre::Error` (i.e. `eyre::Report`), namely
-`into_eyre_result`(IntoEyreResult::into_eyre_result) and
-`into_eyre_report`(IntoEyreReport::into_eyre_report):
+`into_eyre_result` and
+`into_eyre_report`:
 
 ```rust
 use eyre::bail;
@@ -323,8 +323,7 @@ Instead, you'd probably rely on `or_wrap` or `or_wrap_with`.
 #### Example: Wrapping
 
 You can use `or_wrap` or `or_wrap_with` to wrap any value
-that can be converted into the
-[_inner error type_ of `Error`](Error#inner-error-type-i)
+that can be converted into the _inner error type_ of `Error`
 or to attach some context to an error:
 
 ```rust
@@ -385,7 +384,7 @@ However, the error tree can have almost any _inner error type_ as leaf.
 
 The `prelude` module exports commonly used traits and _aliased_ types.
 Importing `prelude::*` should set you up for most use-cases.
-You may also want to import `lazy_errors::Result`(crate::Result).
+You may also want to import `lazy_errors::Result`.
 When you're using the aliased types from the prelude, this crate should
 support any `Result<_, E>` if `E` implements `Into<``Stashable``>`.
 `Stashable` is, basically, a `Box<dyn E>`, where `E` is either
@@ -437,7 +436,7 @@ than that. For example, maybe you don't want to lose static error type
 information or maybe your error types aren't `Sync`.
 In general, this crate should work well with any `Result<_, E>`
 if `E` implements `Into<I>` where `I` is named the
-[_inner error type_ of `Error`](Error#inner-error-type-i).
+_inner error type_ of `Error`.
 This crate will store errors as type `I` in its containers, for example
 in `ErrorStash` or in `Error`. When you're using the type aliases
 from the `prelude`, `I` will always be `Stashable`.
@@ -614,11 +613,6 @@ Application failed
   at lazy_errors/src/lib.rs:120:17
   at lazy_errors/src/lib.rs:45:18
 ```
-
-`or_stash`: crate::OrStash::or_stash
-`or_create_stash`: crate::OrCreateStash::or_create_stash
-`or_wrap`: crate::OrWrap::or_wrap
-`or_wrap_with`: crate::OrWrapWith::or_wrap_with
 
 ---
 
