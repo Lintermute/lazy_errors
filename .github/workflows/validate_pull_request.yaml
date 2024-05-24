@@ -20,8 +20,8 @@ on:
       - opened
       - synchronize
       - reopened
-    branches:
-      - '**'
+    branches-ignore:
+      - 'pub/*'
 
 jobs:
   check_each_commit:
