@@ -19,7 +19,7 @@ on:
 jobs:
   check_each_commit:
     name: check each commit
-    timeout-minutes: 15
+    timeout-minutes: 60
     runs-on: ${{ matrix.system }}
 
     strategy:
@@ -29,32 +29,41 @@ jobs:
 
     steps:
 
+    # For whatever reason, Git needs user name and email for the rebase
+    # in this pipeline, but not in others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
+
     - uses: actions/checkout@v4
       with:
         ref: ${{ matrix.branch }}
+        fetch-depth: 0
 
-    - name: Install stable Rust toolchain with clippy
+    - name: Install stable Rust toolchain
       uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-
-    - name: Install nightly Rust toolchain with rustfmt and miri
-      uses: dtolnay/rust-toolchain@nightly
-      with:
-        components: rustfmt, miri
 
     - name: Install cargo-hack
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack
 
-    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
-    # `Cargo.lock` of library crates is not published / used by other people.
-    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
+
+    # Oops, I changed the API of the xtask package...
+    #
+    # FIXME: `xtask ci` may run `cargo build`, overwriting its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
     - name: Check each commit on ${{ matrix.branch }}
       run: >
+        git checkout 3705cd01e514bb3252eba6f4f69ec61168e141a3
+
         git rebase
         --root
-        --exec 'cargo update'
-        --exec 'cargo xtask ci all --skip-moving-targets'
-        --exec 'git checkout Cargo.lock'
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci --skip-moving-targets'
+
+        git rebase
+        3705cd01e514bb3252eba6f4f69ec61168e141a3
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci all --skip-moving-targets'
