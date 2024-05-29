@@ -1,6 +1,5 @@
-# Runs `cargo xtask ci` (implemented in the `xtask` crate)
-# on what would be the result of merging a pull request, as well as
-# on every single commit that would be added by the pull request,
+# Runs the CI quality gate: compilation, linting, testing, dependency checking,
+# and so on, on every single commit that would be added by the pull request,
 # each time the pull request receives a new push or is (re-)opened.
 #
 # Does not validate the result of the actual merge.
@@ -67,17 +66,44 @@ jobs:
       with:
         tool: cargo-hack
 
+    - name: Install cargo-tarpaulin
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-tarpaulin
+
+    - name: Install cargo-upgrades
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-upgrades
+
     - name: Install cargo-audit
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-audit
 
-    # FIXME: `xtask` modifies and deletes binaries in `target`, even its own.
-    # FIXME: This is not possible on Windows, so install it before running it.
-    # FIXME: Run tarpaulin regularly when it works on stable again.
-    - name: Check each commit added by this PR
+    # Run checks without MIRI first to avoid `cargo clean` between rebase steps.
+    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
+    # `Cargo.lock` of library crates is not published / used by other people.
+    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
+    - name: Check each commit added by this PR (w/o MIRI)
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
+        --exec 'cargo xtask ci all --skip-miri'
+        --exec 'git checkout Cargo.lock'
+
+    # Run checks without MIRI first to avoid `cargo clean` between rebase steps.
+    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
+    # `Cargo.lock` of library crates is not published / used by other people.
+    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
+    # FIXME: `xtask ci miri` run `cargo clean`, deleting its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Check each commit added by this PR (MIRI only)
+      run: >
+        git rebase
+        --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
         --exec 'cargo install --path xtask'
-        --exec 'xtask ci --skip-tarpaulin'
+        --exec 'xtask ci miri'
+        --exec 'git checkout Cargo.lock'

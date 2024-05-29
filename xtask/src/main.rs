@@ -24,7 +24,7 @@
 //! Runs MIRI tests as well.
 //!
 //! Several tasks can be skipped,
-//! please refer to the [CLI documentation](CiArgs).
+//! please refer to the [CLI documentation](CiCommand).
 //!
 //! The implementation of the `xtask` workspace and `cargo xtask`
 //! is based on [the blog post “Make Your Own Make” by matklad][MYOM]
@@ -37,31 +37,36 @@
 
 use std::{env, process, process::ExitCode};
 
+use clap::ArgAction;
 use lazy_errors::{prelude::*, Result};
 
-#[derive(clap::Parser)]
+#[derive(clap::Parser, Copy, Clone, PartialEq, Hash, Eq)]
 #[clap()]
-struct Cli
+enum Cli
 {
+    /// Runs the CI quality gate or parts thereof
+    /// in the workspace on your local machine.
     #[command(subcommand)]
-    command: CliCommand,
+    Ci(CiCommand),
 }
 
-#[derive(clap::Subcommand)]
-enum CliCommand
+#[derive(clap::Subcommand, Copy, Clone, PartialEq, Hash, Eq)]
+enum CiCommand
 {
-    /// Runs the CI quality gate on the workspace on your local machine:
-    /// compilation, linting, testing, dependency checking, and so on.
+    /// Runs the entire CI quality gate in the workspace on your local machine.
+    ///
+    /// Lints, builds, and tests code, documentation, and dependencies.
     /// Aborts on the first step that fails.
     ///
     /// Steps, in order (some arguments omitted here for brevity):
     /// - `cargo fmt --check`
-    /// - `cargo clippy/check` (*)
+    /// - `cargo check/clippy` (*)
     /// - `cargo test` (*)
     /// - `cargo doc` (*)
     /// - `cargo build` (*)
     /// - `cargo tarpaulin`
     /// - `cargo miri test`
+    /// - `cargo upgrades`
     /// - `cargo update --locked`
     /// - `cargo audit --deny warnings`
     ///
@@ -83,22 +88,73 @@ enum CliCommand
     /// after compiling/running the tests. They will be run after the steps
     /// marked with `(*)` to defer the `cargo clean` for as long as possible.
     ///
-    /// Finally, when all other steps succeeded, `cargo update --locked`
-    /// and `cargo audit` will be run. Since checking dependencies requires
-    /// accessing remote servers, we run them last to keep the load on the
-    /// Cargo/Rust servers low.
+    /// Finally, when all other steps have succeeded, `cargo upgrades`,
+    /// cargo update --locked`, and `cargo audit` will be run.
+    /// Since checking dependencies requires accessing remote servers,
+    /// we run them last to keep the load on these servers low.
     #[clap(verbatim_doc_comment)]
-    Ci(CiArgs),
+    All(AllArgs),
+
+    /// Runs a small but powerful subset of the CI quality gate.
+    ///
+    /// This command is very useful during your day-to-day development.
+    /// While it's not as thorough as the complete CI quality gate,
+    /// it's a good indicator for whether your changes will pass
+    /// the other checks as well.
+    ///
+    /// Tip: Use in combination with `cargo watch`.
+    ///
+    /// This command has the same options like `all` but different defaults.
+    Quick(QuickArgs),
+
+    /// Runs the `cargo fmt` step of the CI quality gate.
+    Rustfmt,
+
+    /// Runs the `cargo clippy` step of the CI quality gate.
+    Clippy(CheckArgs),
+
+    /// Runs the `cargo test` step of the CI quality gate.
+    Test(TestArgs),
+
+    /// Runs the `cargo doc` step of the CI quality gate.
+    Docs(DocsArgs),
+
+    /// Runs the `cargo build` step of the CI quality gate.
+    Build(BuildArgs),
+
+    /// Runs the `cargo tarpaulin` step of the CI quality gate.
+    Tarpaulin(CoverageArgs),
+
+    /// Runs the `cargo miri test` step of the CI quality gate.
+    ///
+    /// The `cargo miri test` command is preceded and followed by
+    /// `cargo clean` to ensure MIRI is using MIRI compilation output
+    /// (and to ensure that you won't accidentally use them later).
+    Miri(MiriArgs),
+
+    /// Runs the dependency checks of the CI quality gate.
+    ///
+    /// This command will run `cargo upgrades`, `cargo update --locked`,
+    /// and `cargo audit --deny warnings`.
+    Deps,
 }
 
-#[derive(clap::Args)]
-struct CiArgs
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct AllArgs
 {
-    /// Run ignored tests as well when running `cargo test` (and MIRI).
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    ///
+    /// If missing, run all steps affected by this flag in `dev` profile first.
+    /// After all of those steps have succeeded, all steps in that list
+    /// are run a second time, this time in `release` mode.
+    #[clap(long)]
+    profile: Option<Profile>,
+
+    /// Run ignored tests as well during `cargo test` or `cargo miri test`.
     #[clap(long)]
     include_ignored_tests: bool,
 
-    /// Run ignored tests as well when running `cargo tarpaulin`.
+    /// Run ignored tests as well during `cargo tarpaulin`.
     #[clap(long)]
     include_ignored_tests_in_coverage: bool,
 
@@ -106,14 +162,7 @@ struct CiArgs
     #[clap(long)]
     skip_rustfmt: bool,
 
-    /// Skip running the steps marked with `(*)` in the list above
-    /// a second time with the `--release` flag added.
-    /// Steps will only be run once (using the dev profile).
-    #[clap(long)]
-    skip_release_target: bool,
-
-    /// Skip the `cargo build` step. Note: `cargo check` will still be run.
-    /// If `cargo check` passed, `cargo build` should usually pass as well.
+    /// Skip the `cargo build` step. `check` or `clippy` will still be run.
     #[clap(long)]
     skip_build: bool,
 
@@ -121,28 +170,260 @@ struct CiArgs
     #[clap(long)]
     skip_tarpaulin: bool,
 
-    /// Skip the `cargo miri test` steps (both dev and release profiles).
-    /// You may want to use that flag locally because running the MIRI step
-    /// triggers a `cargo clean`.
+    /// Skip the `cargo miri test` step.
     #[clap(long)]
     skip_miri: bool,
 
-    /// Skip `cargo update --locked` and `cargo audit`.
-    /// This is nice to use on your local machine to keep server load low.
+    /// Skip `cargo upgrades`, `cargo update --locked`, and `cargo audit`.
     #[clap(long)]
     skip_dependency_checks: bool,
 
     /// Skip checks that rely on some external input or on tools that may
     /// change. These checks may fail even if the codebase has not changed.
+    ///
     /// Use this flag to validate old commits, e.g. with `git bisect`.
     /// When this flag is present, the process will run `cargo check` instead
     /// of `cargo clippy` and will skip the `cargo fmt`, `cargo tarpaulin`,
-    /// `cargo update --locked`, and `cargo audit` steps.
+    /// as well as the dependency checks.
     #[clap(long)]
     skip_moving_targets: bool,
 }
 
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct QuickArgs
+{
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long, default_value_t = Profile::Dev)]
+    profile: Profile,
+
+    /// Run ignored tests as well during `cargo test` or `cargo miri test`.
+    #[clap(long)]
+    include_ignored_tests: bool,
+
+    /// Run ignored tests as well during `cargo tarpaulin`.
+    #[clap(long)]
+    include_ignored_tests_in_coverage: bool,
+
+    /// Skip running the rustfmt file formatting check.
+    #[clap(long)]
+    skip_rustfmt: bool,
+
+    /// Skip the `cargo build` step. `check` or `clippy` will still be run.
+    ///
+    /// If `cargo check` passed, `cargo build` should usually pass as well.
+    #[clap(
+        long,
+        value_name = "BOOL",
+        default_missing_value("true"),
+        default_value("true"),
+        num_args(0..=1),
+        require_equals(true),
+        action = ArgAction::Set,
+    )]
+    skip_build: bool,
+
+    /// Skip the `cargo tarpaulin` step.
+    #[clap(
+        long,
+        value_name = "BOOL",
+        default_missing_value("true"),
+        default_value("true"),
+        num_args(0..=1),
+        require_equals(true),
+        action = ArgAction::Set,
+    )]
+    skip_tarpaulin: bool,
+
+    /// Skip the `cargo miri test` step.
+    ///
+    /// You may want to use that flag locally because running the MIRI step
+    /// triggers a `cargo clean`.
+    #[clap(
+        long,
+        value_name = "BOOL",
+        default_missing_value("true"),
+        default_value("true"),
+        num_args(0..=1),
+        require_equals(true),
+        action = ArgAction::Set,
+    )]
+    skip_miri: bool,
+
+    /// Skip `cargo upgrades`, `cargo update --locked`, and `cargo audit`.
+    ///
+    /// This is nice to use on your local machine to keep server load low.
+    #[clap(
+        long,
+        value_name = "BOOL",
+        default_missing_value("true"),
+        default_value("true"),
+        num_args(0..=1),
+        require_equals(true),
+        action = ArgAction::Set,
+    )]
+    skip_dependency_checks: bool,
+
+    /// Skip checks that rely on some external input or on tools that may
+    /// change. These checks may fail even if the codebase has not changed.
+    ///
+    /// Use this flag to validate old commits, e.g. with `git bisect`.
+    /// When this flag is present, the process will run `cargo check` instead
+    /// of `cargo clippy` and will skip the `cargo fmt`, `cargo tarpaulin`,
+    /// as well as the dependency checks.
+    #[clap(long)]
+    skip_moving_targets: bool,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct CheckArgs
+{
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct TestArgs
+{
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+
+    /// Run ignored tests as well.
+    #[clap(long)]
+    include_ignored_tests: bool,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct DocsArgs
+{
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct BuildArgs
+{
+    #[clap(long)]
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    profile: Profile,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct CoverageArgs
+{
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+
+    /// Run ignored tests as well.
+    #[clap(long)]
+    include_ignored_tests: bool,
+}
+
+#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+struct MiriArgs
+{
+    /// Run ignored tests as well.
+    #[clap(long)]
+    include_ignored_tests: bool,
+}
+
+#[derive(clap::ValueEnum, Copy, Clone, PartialEq, Hash, Eq)]
+enum Profile
+{
+    Dev,
+    Release,
+}
+
 type CommandLine = Vec<&'static str>;
+
+impl CheckArgs
+{
+    fn new(profile: Profile) -> Self
+    {
+        Self { profile }
+    }
+}
+
+impl TestArgs
+{
+    fn new(args: &AllArgs, profile: Profile) -> Self
+    {
+        Self {
+            profile,
+            include_ignored_tests: args.include_ignored_tests,
+        }
+    }
+}
+
+impl DocsArgs
+{
+    fn new(profile: Profile) -> Self
+    {
+        Self { profile }
+    }
+}
+
+impl BuildArgs
+{
+    fn new(profile: Profile) -> Self
+    {
+        Self { profile }
+    }
+}
+
+impl CoverageArgs
+{
+    fn new(args: &AllArgs, profile: Profile) -> Self
+    {
+        Self {
+            profile,
+            include_ignored_tests: args.include_ignored_tests_in_coverage,
+        }
+    }
+}
+
+impl MiriArgs
+{
+    fn new(args: &AllArgs) -> Self
+    {
+        Self {
+            include_ignored_tests: args.include_ignored_tests,
+        }
+    }
+}
+
+impl From<&QuickArgs> for AllArgs
+{
+    fn from(value: &QuickArgs) -> Self
+    {
+        Self {
+            profile: Some(value.profile),
+            include_ignored_tests: value.include_ignored_tests,
+            include_ignored_tests_in_coverage: value
+                .include_ignored_tests_in_coverage,
+            skip_rustfmt: value.skip_rustfmt,
+            skip_build: value.skip_build,
+            skip_tarpaulin: value.skip_tarpaulin,
+            skip_miri: value.skip_miri,
+            skip_dependency_checks: value.skip_dependency_checks,
+            skip_moving_targets: value.skip_moving_targets,
+        }
+    }
+}
+
+impl std::fmt::Display for Profile
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
+        match self {
+            Profile::Dev => write!(f, "dev"),
+            Profile::Release => write!(f, "release"),
+        }
+    }
+}
 
 #[cfg(not(tarpaulin_include))]
 fn main() -> ExitCode
@@ -150,7 +431,7 @@ fn main() -> ExitCode
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("Error: {err:#}");
+            eprintln!("{err:#}");
             ExitCode::FAILURE
         },
     }
@@ -162,90 +443,135 @@ fn run() -> Result<()>
     let args = parse_args_from_env()?;
     let tasks = tasklist_from(&args);
 
-    // Make `cargo doc` raise an error if there are any warnings.
-    env::set_var("RUSTDOCFLAGS", "-Dwarnings");
     exec_all(&tasks)
 }
 
 #[cfg(not(tarpaulin_include))]
-fn parse_args_from_env() -> Result<CiArgs>
+fn parse_args_from_env() -> Result<CiCommand>
 {
     parse_args(std::env::args_os())
 }
 
-fn parse_args<IntoIter, T>(args: IntoIter) -> Result<CiArgs>
+fn parse_args<IntoIter, T>(args: IntoIter) -> Result<CiCommand>
 where
     IntoIter: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
     use clap::Parser;
 
-    let Cli { command } = Cli::try_parse_from(args).or_wrap()?;
-    let CliCommand::Ci(args) = command;
+    let Cli::Ci(args) = Cli::try_parse_from(args).or_wrap()?;
 
     Ok(args)
 }
 
-fn tasklist_from(args: &CiArgs) -> Vec<CommandLine>
+fn tasklist_from(args: &CiCommand) -> Vec<CommandLine>
+{
+    match args {
+        CiCommand::All(args) => all(args),
+        CiCommand::Quick(args) => quick(args),
+        CiCommand::Rustfmt => vec![rustfmt()],
+        CiCommand::Clippy(args) => vec![clippy(args)],
+        CiCommand::Test(args) => vec![test(args)],
+        CiCommand::Build(args) => vec![build(args)],
+        CiCommand::Tarpaulin(args) => vec![tarpaulin(args)],
+        CiCommand::Miri(args) => miri(args).into(),
+        CiCommand::Docs(args) => vec![docs(args)],
+        CiCommand::Deps => deps().into(),
+    }
+}
+
+fn all(args: &AllArgs) -> Vec<CommandLine>
 {
     let mut tasklist = Vec::new();
 
     if !args.skip_moving_targets && !args.skip_rustfmt {
-        tasklist.push(fmt());
+        tasklist.push(rustfmt());
     }
 
-    tasklist.extend(compile_and_test(args, false));
-    if !args.skip_release_target {
-        tasklist.extend(compile_and_test(args, true));
+    match args.profile {
+        Some(profile) => tasklist.extend(compile_and_test(args, profile)),
+        None => {
+            tasklist.extend(compile_and_test(args, Profile::Dev));
+            tasklist.extend(compile_and_test(args, Profile::Release));
+        },
     }
 
-    if !args.skip_moving_targets && !args.skip_miri {
-        tasklist.extend(test_miri(args));
-    }
+    if !args.skip_moving_targets {
+        if !args.skip_miri {
+            tasklist.extend(miri(&MiriArgs::new(args)));
+        }
 
-    if !args.skip_moving_targets && !args.skip_dependency_checks {
-        // Checks if our dependencies are up-to-date and secure.
-        // These functions will access the network.
-        // These function may produce different results when run again,
-        // dependant on upstream changes.
-        tasklist.push(update());
-        tasklist.push(audit());
+        if !args.skip_dependency_checks {
+            // Checks if our dependencies are up-to-date and secure.
+            // These functions will access the network.
+            // These function may produce different results when run again,
+            // dependant on upstream changes.
+            tasklist.extend(deps());
+        }
     }
 
     tasklist
 }
 
-fn compile_and_test(args: &CiArgs, is_release: bool) -> Vec<CommandLine>
+fn quick(args: &QuickArgs) -> Vec<CommandLine>
+{
+    all(&AllArgs::from(args))
+}
+
+fn compile_and_test(args: &AllArgs, profile: Profile) -> Vec<CommandLine>
 {
     let mut tasklist = Vec::new();
 
     if !args.skip_moving_targets {
-        tasklist.push(clippy(is_release));
+        tasklist.push(clippy(&CheckArgs::new(profile)));
     } else {
-        tasklist.push(check(is_release));
+        tasklist.push(check(&CheckArgs::new(profile)));
     }
 
-    tasklist.push(test(args, is_release));
+    tasklist.push(test(&TestArgs::new(args, profile)));
 
-    tasklist.push(doc(is_release));
+    tasklist.push(docs(&DocsArgs::new(profile)));
 
     if !args.skip_build {
-        tasklist.push(build(is_release));
+        tasklist.push(build(&BuildArgs::new(profile)));
     }
 
     if !args.skip_moving_targets && !args.skip_tarpaulin {
-        tasklist.push(tarpaulin(args, is_release));
+        tasklist.push(tarpaulin(&CoverageArgs::new(args, profile)));
     }
 
     tasklist
 }
 
-fn fmt() -> CommandLine
+fn rustfmt() -> CommandLine
 {
     vec!["cargo", "+nightly", "--locked", "fmt", "--check", "--all"]
 }
 
-fn clippy(is_release: bool) -> CommandLine
+fn check(args: &CheckArgs) -> CommandLine
+{
+    // It looks like there is no way to specify doctests here.
+
+    let mut task = vec![
+        "cargo",
+        "hack",
+        "check",
+        "--locked",
+        "--workspace",
+        "--feature-powerset",
+        "--optional-deps",
+        "--all-targets",
+    ];
+
+    match args.profile {
+        Profile::Release => task.push("--release"),
+        Profile::Dev => (),
+    }
+
+    task
+}
+
+fn clippy(args: &CheckArgs) -> CommandLine
 {
     // Clippy seems to use the same arguments as `cargo check`.
     // It looks like there is no way to specify doctests here.
@@ -261,8 +587,9 @@ fn clippy(is_release: bool) -> CommandLine
         "--all-targets",
     ];
 
-    if is_release {
-        task.push("--release");
+    match args.profile {
+        Profile::Release => task.push("--release"),
+        Profile::Dev => (),
     }
 
     task.extend(&["--", "-Dwarnings"]);
@@ -270,29 +597,7 @@ fn clippy(is_release: bool) -> CommandLine
     task
 }
 
-fn check(is_release: bool) -> CommandLine
-{
-    // It looks like there is no way to specify doctests here.
-
-    let mut task = vec![
-        "cargo",
-        "hack",
-        "check",
-        "--locked",
-        "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
-        "--all-targets",
-    ];
-
-    if is_release {
-        task.push("--release");
-    }
-
-    task
-}
-
-fn test(config: &CiArgs, is_release: bool) -> CommandLine
+fn test(args: &TestArgs) -> CommandLine
 {
     // WARNING: `--all-targets` enables benchmarks and disables doctests.
     let mut task = vec![
@@ -305,19 +610,23 @@ fn test(config: &CiArgs, is_release: bool) -> CommandLine
         "--optional-deps",
     ];
 
-    if is_release {
-        task.push("--release");
+    match args.profile {
+        Profile::Release => task.push("--release"),
+        Profile::Dev => (),
     }
 
-    if config.include_ignored_tests {
+    if args.include_ignored_tests {
         task.extend(&["--", "--include-ignored"]);
     }
 
     task
 }
 
-fn doc(is_release: bool) -> CommandLine
+fn docs(args: &DocsArgs) -> CommandLine
 {
+    // Make `cargo doc` raise an error if there are any warnings.
+    env::set_var("RUSTDOCFLAGS", "-Dwarnings");
+
     // Test if documentation builds properly.
     // This is especially useful to detect broken intra doc links.
 
@@ -332,14 +641,15 @@ fn doc(is_release: bool) -> CommandLine
         "--no-deps",
     ];
 
-    if is_release {
-        task.push("--release");
+    match args.profile {
+        Profile::Release => task.push("--release"),
+        Profile::Dev => (),
     }
 
     task
 }
 
-fn build(is_release: bool) -> CommandLine
+fn build(args: &BuildArgs) -> CommandLine
 {
     let mut task = vec![
         "cargo",
@@ -353,14 +663,15 @@ fn build(is_release: bool) -> CommandLine
         "--exclude=xtask",
     ];
 
-    if is_release {
-        task.push("--release");
+    match args.profile {
+        Profile::Release => task.push("--release"),
+        Profile::Dev => (),
     }
 
     task
 }
 
-fn tarpaulin(config: &CiArgs, is_release: bool) -> CommandLine
+fn tarpaulin(args: &CoverageArgs) -> CommandLine
 {
     // WARNING: `--all-targets` enables benchmarks and disables doctests.
     let mut task = vec![
@@ -374,21 +685,24 @@ fn tarpaulin(config: &CiArgs, is_release: bool) -> CommandLine
         "--no-fail-fast",
     ];
 
-    if is_release {
-        task.extend(&["--output-dir", "tarpaulin-report-release"]);
-        task.push("--release");
-    } else {
-        task.extend(&["--output-dir", "tarpaulin-report-dev"]);
+    match args.profile {
+        Profile::Release => {
+            task.extend(&["--output-dir", "tarpaulin-report-release"]);
+            task.push("--release");
+        },
+        Profile::Dev => {
+            task.extend(&["--output-dir", "tarpaulin-report-dev"]);
+        },
     }
 
-    if config.include_ignored_tests_in_coverage {
+    if args.include_ignored_tests {
         task.extend(&["--", "--include-ignored"]);
     }
 
     task
 }
 
-fn test_miri(config: &CiArgs) -> [CommandLine; 3]
+fn miri(args: &MiriArgs) -> [CommandLine; 3]
 {
     // Remove (non-)MIRI outputs
     let clean = vec!["cargo", "+nightly", "--locked", "clean"];
@@ -407,21 +721,20 @@ fn test_miri(config: &CiArgs) -> [CommandLine; 3]
         "--optional-deps",
     ];
 
-    if config.include_ignored_tests {
+    if args.include_ignored_tests {
         test.extend(&["--", "--include-ignored"]);
     }
 
     [clean.clone(), test, clean]
 }
 
-fn update() -> CommandLine
+fn deps() -> [CommandLine; 3]
 {
-    vec!["cargo", "--locked", "update", "--workspace"]
-}
+    let upgrades = vec!["cargo", "upgrades"];
+    let update = vec!["cargo", "--locked", "update", "--workspace"];
+    let audit = vec!["cargo", "--locked", "audit", "--deny", "warnings"];
 
-fn audit() -> CommandLine
-{
-    vec!["cargo", "--locked", "audit", "--deny", "warnings"]
+    [upgrades, update, audit]
 }
 
 fn exec_all<L>(tasklist: &[L]) -> Result<()>
@@ -466,9 +779,9 @@ mod tests
     use super::*;
 
     #[test_case(
-        &["xtask", "ci",
+        &["xtask", "ci", "all",
+            "--profile=dev",
             "--skip-rustfmt",
-            "--skip-release-target",
             "--skip-build",
             "--skip-tarpaulin",
             "--skip-miri",
@@ -488,7 +801,7 @@ mod tests
                 "--no-deps"],
         ]; "minimal tasklist")]
     #[test_case(
-        &["xtask", "ci"],
+        &["xtask", "ci", "all"],
         &[
             &["cargo", "+nightly", "--locked", "fmt", "--check", "--all"],
 
@@ -539,11 +852,12 @@ mod tests
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps"],
             &["cargo", "+nightly", "--locked", "clean"],
+            &["cargo", "upgrades"],
             &["cargo", "--locked", "update", "--workspace"],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
         ]; "default tasklist")]
     #[test_case(
-        &["xtask", "ci", "--skip-moving-targets"],
+        &["xtask", "ci", "all", "--skip-moving-targets"],
         &[
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
@@ -589,7 +903,7 @@ mod tests
     }
 
     #[test_case(
-        &["xtask", "ci", "--include-ignored-tests"],
+        &["xtask", "ci", "all", "--include-ignored-tests"],
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
@@ -610,7 +924,7 @@ mod tests
                 "--release"],
         ]; "can run ignored tests w/o coverage")]
     #[test_case(
-        &["xtask", "ci", "--include-ignored-tests-in-coverage"],
+        &["xtask", "ci", "all", "--include-ignored-tests-in-coverage"],
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
