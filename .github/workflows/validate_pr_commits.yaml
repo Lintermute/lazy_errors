@@ -2,25 +2,35 @@
 # and so on, on every single commit that would be added by the pull request,
 # each time the pull request receives a new push or is (re-)opened.
 #
-# Does not validate the result of the actual merge.
-# See `validate_git_head.yaml` for that.
-#
-# This pipeline is a “rebasing” version of `validate_git_head.yaml`.
+# Does NOT validate the result of the merge; see `validate.yaml` for that.
+# This pipeline is a "rebase --exec" variant of `validate.yaml`.
 #
 # Please note the following refs:
 #
-# - github.ref      → refs/pull/$id/merge
+# - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
+# - github.ref_name → $branch_name, resp. $pr_id/merge
 # - github.head_ref → $source_branch_name, e.g. "feature/foobar"
 # - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
 
-name: Validate PR Commits
+name: Validate each commit
 
 on:
+
   pull_request:
     types:
       - opened
       - synchronize
       - reopened
+
+    # Commits on `dev/*` have already been checked individually.
+    # Additionally, at the time of a release (i.e., when merging to `pub/*`),
+    # some checks might not work anymore. For example, clippy may have gotten
+    # new lints, or there may be a new versions of some dependency. Such an
+    # issue would be fixed on `dev/*` first. But even then, some of the
+    # thorough checks defined in this pipeline will fail for "old" commits
+    # on `dev/*`. Note that we still run `validate.yaml`, of course.
+    # That pipeline will check both the HEAD of the PR source branch,
+    # as well as what would be the result of the merging the PR to `pub/*`.
     branches-ignore:
       - 'pub/*'
 
@@ -47,7 +57,7 @@ jobs:
       with:
         components: rustfmt
 
-    - name: rustfmt
+    - name: Run rustfmt
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
@@ -83,7 +93,7 @@ jobs:
       with:
         tool: cargo-hack
 
-    - name: build & test
+    - name: Build and test
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
@@ -192,7 +202,7 @@ jobs:
       with:
         tool: cargo-hack
 
-    - name: Build docs
+    - name: Build documentation
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}

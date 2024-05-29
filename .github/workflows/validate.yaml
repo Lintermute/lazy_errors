@@ -1,9 +1,30 @@
 # Runs the CI quality gate: compilation, linting, testing, dependency checking,
 # and so on. Parallel implementation of the steps defined in the `xtask` crate.
+#
+# This pipeline is triggered on push, on PR events, and on schedule.
+# If triggered on schedule, this pipeline will check whether the
+# primary branches of this repo still build.
+# If triggered by a pull request event, this pipeline will validate
+# what would be the result of merging that PR.
+# If triggered by a push, this pipeline will check the commit that was pushed
+# (i.e. the Git HEAD of the branch that was pushed to).
+#
+# Please note the following refs:
+#
+# - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
+# - github.ref_name → $branch_name, resp. $pr_id/merge
+# - github.head_ref → $source_branch_name, e.g. "feature/foobar"
+# - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
 
-name: Validate Git HEAD
+name: Validate
 
 on:
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
   push:
     branches:
@@ -36,7 +57,8 @@ jobs:
       name: "Determine branches to check"
       run: |
         case "${{ github.event_name }}" in
-            "push")     branches="[ \"$GITHUB_REF_NAME\" ]" ;;
+            "push") branches="[ \"${{ github.ref_name }}\" ]" ;;
+            "pull_request") branches="[ \"${{ github.ref }}\" ]" ;;
             "schedule") branches="[ \"dev/0.1\", \"pub/0.1\" ]" ;;
             *)
                 echo "Unknown event: ${{ github.event_name }}" >&2
@@ -74,7 +96,7 @@ jobs:
     - name: Update Cargo.lock
       run: cargo update
 
-    - name: rustfmt
+    - name: Run rustfmt
       run: cargo xtask ci rustfmt
 
 
@@ -225,7 +247,7 @@ jobs:
     - name: Update Cargo.lock
       run: cargo update
 
-    - name: Build docs
+    - name: Build documentation
       run: cargo xtask ci docs --profile ${{ matrix.profile }}
 
 

@@ -2,7 +2,7 @@
 # excluding moving targets (such as clippy or `cargo audit`).
 # This pipeline tries to indicate whether developers may use `git bisect`.
 
-name: Validate Commit History
+name: Validate entire commit history
 
 on:
   schedule:
@@ -51,7 +51,7 @@ jobs:
     # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
     # `Cargo.lock` of library crates is not published / used by other people.
     # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
-    - name: Checking all commits on ${{ matrix.branch }}
+    - name: Check each commit on ${{ matrix.branch }}
       run: >
         git rebase
         --root
