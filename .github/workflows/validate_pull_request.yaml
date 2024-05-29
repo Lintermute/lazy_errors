@@ -5,13 +5,15 @@
 # Does not validate the result of the actual merge.
 # See `validate_git_head.yaml` for that.
 #
+# This pipeline is a “rebasing” version of `validate_git_head.yaml`.
+#
 # Please note the following refs:
 #
 # - github.ref      → refs/pull/$id/merge
 # - github.head_ref → $source_branch_name, e.g. "feature/foobar"
 # - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
 
-name: Validate PR
+name: Validate PR Commits
 
 on:
   pull_request:
@@ -23,14 +25,12 @@ on:
       - 'pub/*'
 
 jobs:
-  check_each_commit:
-    name: check each commit
-    timeout-minutes: 60
-    runs-on: ${{ matrix.system }}
 
-    strategy:
-      matrix:
-        system: [ ubuntu-latest, windows-latest, macos-latest ]
+  rustfmt:
+    timeout-minutes: 5
+
+    # Results should be the same on all systems.
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -40,21 +40,38 @@ jobs:
     - uses: actions/checkout@v4
       with:
         ref: ${{ github.head_ref }}
+        fetch-depth: 0
 
-    - name: Fetch commits on ${{ github.head_ref }} reachable from ${{ github.base_ref }}
-      # Note that the command below fetches too much data.
-      # Feel free to adjust the command according to the
-      # requirement above. In May 2020, trying to be precise
-      # seemed to trigger a deadlock in Git or GitHub here.
-      run: git fetch --no-tags --prune --unshallow origin
-
-    - name: Install nightly Rust toolchain with rustfmt and miri
+    - name: Install nightly Rust toolchain with rustfmt
       uses: dtolnay/rust-toolchain@nightly
       with:
-        components: rustfmt, miri
+        components: rustfmt
 
-    - name: Setup MIRI
-      run: cargo +nightly miri setup
+    - name: rustfmt
+      run: >
+        git rebase
+        --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
+        --exec 'cargo xtask ci rustfmt'
+        --exec 'git checkout Cargo.lock'
+
+
+  build:
+    name: build & test
+    timeout-minutes: 30
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        profile: [ dev, release ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
 
     - name: Install stable Rust toolchain with clippy
       uses: dtolnay/rust-toolchain@stable
@@ -66,44 +83,151 @@ jobs:
       with:
         tool: cargo-hack
 
+    - name: build & test
+      run: >
+        git rebase
+        --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
+        --exec 'cargo xtask ci clippy --profile ${{ matrix.profile }}'
+        --exec 'cargo xtask ci test   --profile ${{ matrix.profile }}'
+        --exec 'cargo xtask ci build  --profile ${{ matrix.profile }}'
+        --exec 'git checkout Cargo.lock'
+
+
+  coverage:
+    timeout-minutes: 30
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest ]
+        profile: [ dev, release ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
+
+    # FIXME: Remove nightly once tarpaulin can run doctests on stable again
+    - name: Install nightly Rust toolchain
+      uses: dtolnay/rust-toolchain@nightly
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Install cargo-tarpaulin
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-tarpaulin
 
-    - name: Install cargo-upgrades
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-upgrades
-
-    - name: Install cargo-audit
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-audit
-
-    # Run checks without MIRI first to avoid `cargo clean` between rebase steps.
-    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
-    # `Cargo.lock` of library crates is not published / used by other people.
-    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
-    - name: Check each commit added by this PR (w/o MIRI)
+    - name: Check coverage
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
         --exec 'cargo update'
-        --exec 'cargo xtask ci all --skip-miri'
+        --exec 'cargo xtask ci tarpaulin --profile ${{ matrix.profile }}'
         --exec 'git checkout Cargo.lock'
 
-    # Run checks without MIRI first to avoid `cargo clean` between rebase steps.
-    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
-    # `Cargo.lock` of library crates is not published / used by other people.
-    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
-    # FIXME: `xtask ci miri` run `cargo clean`, deleting its own binary.
+
+  miri:
+    timeout-minutes: 60
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
+
+    - name: Install nightly Rust toolchain with miri
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: miri
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    # FIXME: `xtask ci miri` runs `cargo clean`, deleting its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
-    - name: Check each commit added by this PR (MIRI only)
+    - name: Run MIRI tests
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
         --exec 'cargo update'
         --exec 'cargo install --path xtask'
         --exec 'xtask ci miri'
+        --exec 'git checkout Cargo.lock'
+
+
+  docs:
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        profile: [ dev, release ]
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    - name: Build docs
+      run: >
+        git rebase
+        --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
+        --exec 'cargo xtask ci docs --profile ${{ matrix.profile }}'
+        --exec 'git checkout Cargo.lock'
+
+
+  deps:
+    timeout-minutes: 5
+
+    # Results should be the same on all systems.
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-upgrades
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-upgrades
+
+    # The Cargo.lock of library crates is not published / used by other people.
+    # TODO: If we're a binary crate, FAIL if we're using outdated dependencies.
+    - name: Check dependencies
+      run: >
+        git rebase
+        --fork-point origin/${{ github.base_ref }}
+        --exec 'cargo update'
+        --exec 'cargo xtask ci deps'
         --exec 'git checkout Cargo.lock'
