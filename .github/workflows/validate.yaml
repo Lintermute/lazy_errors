@@ -1,9 +1,30 @@
 # Runs the CI quality gate: compilation, linting, testing, dependency checking,
-# and so on. Parallel implementation of the steps defined in the `xtasks` crate.
+# and so on. Parallel implementation of the steps defined in the `xtask` crate.
+#
+# This pipeline is triggered on push, on PR events, and on schedule.
+# If triggered on schedule, this pipeline will check whether the
+# primary branches of this repo still build.
+# If triggered by a pull request event, this pipeline will validate
+# what would be the result of merging that PR.
+# If triggered by a push, this pipeline will check the commit that was pushed
+# (i.e. the Git HEAD of the branch that was pushed to).
+#
+# Please note the following refs:
+#
+# - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
+# - github.ref_name → $branch_name, resp. $pr_id/merge
+# - github.head_ref → $source_branch_name, e.g. "feature/foobar"
+# - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
 
-name: Validate Git HEAD
+name: Validate
 
 on:
+
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
 
   push:
     branches:
@@ -36,7 +57,8 @@ jobs:
       name: "Determine branches to check"
       run: |
         case "${{ github.event_name }}" in
-            "push")     branches="[ \"$GITHUB_REF_NAME\" ]" ;;
+            "push") branches="[ \"${{ github.ref_name }}\" ]" ;;
+            "pull_request") branches="[ \"${{ github.ref }}\" ]" ;;
             "schedule") branches="[ \"dev/0.1\", \"pub/0.1\" ]" ;;
             *)
                 echo "Unknown event: ${{ github.event_name }}" >&2
@@ -44,11 +66,12 @@ jobs:
         esac
         echo "branches=$branches" >> $GITHUB_OUTPUT
 
+
   rustfmt:
     needs: init
-    timeout-minutes: 1
+    timeout-minutes: 5
 
-    # Results should be the same on all systems. Use the fastest/cheapest one.
+    # Results should be the same on all systems.
     runs-on: ubuntu-latest
 
     strategy:
@@ -56,6 +79,9 @@ jobs:
         branch: ${{ fromJson(needs.init.outputs.branches) }}
 
     steps:
+
+    # Avoid linter errors due to changed line endings
+    - run: git config --global core.autocrlf false
 
     - uses: actions/checkout@v4
       with:
@@ -66,8 +92,13 @@ jobs:
       with:
         components: rustfmt
 
-    - name: rustfmt
-      run: cargo +nightly --locked fmt --check --all
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
+
+    - name: Run rustfmt
+      run: cargo xtask ci rustfmt
+
 
   build:
     name: build & test
@@ -97,36 +128,19 @@ jobs:
       with:
         tool: cargo-hack
 
-    # Use individual steps so we get a nice overview in the GitHub UI.
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
 
     - name: Run clippy
-      run: >
-        cargo hack clippy
-        --locked --workspace --feature-powerset --optional-deps
-        --all-targets --profile ${{ matrix.profile }} -- -Dwarnings
-
-    # Run tests early to fail ASAP. Note that `cargo test` is faster than
-    # `cargo tarpaulin` and has a nicer UI.
+      run: cargo xtask ci clippy --profile ${{ matrix.profile }}
 
     - name: Run tests
-      run: >
-        cargo hack test
-        --locked --workspace --feature-powerset --optional-deps
-        --profile ${{ matrix.profile }}
-
-    - name: Build docs
-      run: >
-        cargo hack doc
-        --locked --workspace --feature-powerset --optional-deps
-        --no-deps --profile ${{ matrix.profile}}
-      env:
-        RUSTDOCFLAGS: -Dwarnings
+      run: cargo xtask ci test --profile ${{ matrix.profile }}
 
     - name: Build artifacts
-      run: >
-        cargo hack build
-        --locked --workspace --feature-powerset --optional-deps
-        --all-targets --profile ${{ matrix.profile}}
+      run: cargo xtask ci build --profile ${{ matrix.profile }}
+
 
   coverage:
     needs: init
@@ -145,24 +159,25 @@ jobs:
       with:
         ref: ${{ matrix.branch }}
 
-    - name: Install stable Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-
     # FIXME: Remove nightly once tarpaulin can run doctests on stable again
     - name: Install nightly Rust toolchain
       uses: dtolnay/rust-toolchain@nightly
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
 
     - name: Install cargo-tarpaulin
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-tarpaulin
 
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
+
     - name: Check coverage
-      run: >
-        cargo tarpaulin
-        --locked --workspace
-        --all-features --all-targets --doc --no-fail-fast
-        --profile ${{ matrix.profile}}
+      run: cargo xtask ci tarpaulin --profile ${{ matrix.profile }}
+
 
   miri:
     needs: init
@@ -175,6 +190,7 @@ jobs:
         branch: ${{ fromJson(needs.init.outputs.branches) }}
 
     steps:
+
     - uses: actions/checkout@v4
       with:
         ref: ${{ matrix.branch }}
@@ -189,25 +205,32 @@ jobs:
       with:
         tool: cargo-hack
 
-    - name: Run MIRI tests
-      run: >
-        cargo +nightly hack miri test
-        --locked --workspace --feature-powerset --optional-deps
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
 
-  # To keep load on the servers low, we'll defer checking dependencies
-  # until we're more sure we did not introduce other problems.
-  deps:
+    # FIXME: `xtask ci miri` runs `cargo clean`, deleting its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Install xtask
+      run: cargo install --path xtask
+
+    - name: Run MIRI tests
+      run: xtask ci miri
+
+
+  docs:
     needs: init
     timeout-minutes: 5
-
-    # Results should be the same on all systems. Use the fastest one.
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.system }}
 
     strategy:
       matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
         branch: ${{ fromJson(needs.init.outputs.branches) }}
+        profile: [ dev, release ]
 
     steps:
+
     - uses: actions/checkout@v4
       with:
         ref: ${{ matrix.branch }}
@@ -215,8 +238,49 @@ jobs:
     - name: Install stable Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Check for dependency updates
-      run: cargo --locked update
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
 
-    - name: Check for security issues
-      run: cargo --locked audit --deny warnings
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
+
+    - name: Build documentation
+      run: cargo xtask ci docs --profile ${{ matrix.profile }}
+
+
+  deps:
+    needs: init
+    timeout-minutes: 5
+
+    # Results should be the same on all systems.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-upgrades
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-upgrades
+
+    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
+    # The Cargo.lock of library crates is not published / used by other people.
+    # TODO: If we're a binary crate, FAIL if we're using outdated dependencies.
+    - name: Update Cargo.lock
+      run: cargo update
+
+    - name: Check dependencies
+      run: cargo xtask ci deps

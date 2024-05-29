@@ -1,7 +1,8 @@
 # Checks if all past commits pass the CI quality gate `cargo xtask ci`,
 # excluding moving targets (such as clippy or `cargo audit`).
+# This pipeline tries to indicate whether developers may use `git bisect`.
 
-name: Validate Commit History
+name: Validate entire commit history
 
 on:
   schedule:
@@ -47,8 +48,13 @@ jobs:
       with:
         tool: cargo-hack
 
-    - name: Checking all commits on ${{ matrix.branch }}
+    # Run `cargo update` because `xtask` would fail if `Cargo.lock` is outdated.
+    # `Cargo.lock` of library crates is not published / used by other people.
+    # TODO: In binary projects, do NOT update/restore `Cargo.lock`.
+    - name: Check each commit on ${{ matrix.branch }}
       run: >
         git rebase
         --root
-        --exec 'cargo xtask ci --skip-moving-targets'
+        --exec 'cargo update'
+        --exec 'cargo xtask ci all --skip-moving-targets'
+        --exec 'git checkout Cargo.lock'
