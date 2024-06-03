@@ -41,7 +41,6 @@ use clap::ArgAction;
 use lazy_errors::{prelude::*, Result};
 
 #[derive(clap::Parser, Copy, Clone, PartialEq, Hash, Eq)]
-#[clap()]
 enum Cli
 {
     /// Runs the CI quality gate or parts thereof
