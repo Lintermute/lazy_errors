@@ -23,8 +23,7 @@
 //! Tests, builds, runs all lints, and validates dependencies.
 //! Runs MIRI tests as well.
 //!
-//! Several tasks can be skipped,
-//! please refer to the [CLI documentation](ci::Command).
+//! Several tasks can be skipped, please refer to the [CLI documentation](Ci).
 //!
 //! The implementation of the `xtask` workspace and `cargo xtask`
 //! is based on [the blog post “Make Your Own Make” by matklad][MYOM]
@@ -39,18 +38,19 @@ mod ci;
 
 use std::{process, process::ExitCode};
 
+use ci::Ci;
 use lazy_errors::{prelude::*, Result};
 
 type TaskList = Vec<CommandLine>;
 type CommandLine = Vec<&'static str>;
 
 #[derive(clap::Parser, Copy, Clone, PartialEq, Hash, Eq)]
-enum Command
+enum Xtask
 {
     /// Runs the CI quality gate or parts thereof
     /// in the workspace on your local machine.
     #[command(subcommand)]
-    Ci(ci::Command),
+    Ci(Ci),
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -75,26 +75,26 @@ fn run() -> Result<()>
 }
 
 #[cfg(not(tarpaulin_include))]
-fn parse_args_from_env() -> Result<Command>
+fn parse_args_from_env() -> Result<Xtask>
 {
     parse_args(std::env::args_os())
 }
 
-fn parse_args<IntoIter, T>(args: IntoIter) -> Result<Command>
+fn parse_args<IntoIter, T>(args: IntoIter) -> Result<Xtask>
 where
     IntoIter: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
     use clap::Parser;
 
-    let command = Command::try_parse_from(args).or_wrap()?;
+    let command = Xtask::try_parse_from(args).or_wrap()?;
 
     Ok(command)
 }
 
-fn tasklist_from(command: &Command) -> TaskList
+fn tasklist_from(command: &Xtask) -> TaskList
 {
-    let Command::Ci(args) = command;
+    let Xtask::Ci(args) = command;
     ci::tasklist_from(args)
 }
 

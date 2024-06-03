@@ -25,7 +25,7 @@ use clap::ArgAction;
 use super::{CommandLine, TaskList};
 
 #[derive(clap::Subcommand, Copy, Clone, PartialEq, Hash, Eq)]
-pub enum Command
+pub enum Ci
 {
     /// Runs the entire CI quality gate in the workspace on your local machine.
     ///
@@ -397,19 +397,19 @@ impl std::fmt::Display for Profile
     }
 }
 
-pub fn tasklist_from(args: &Command) -> TaskList
+pub fn tasklist_from(args: &Ci) -> TaskList
 {
     match args {
-        Command::All(args) => all(args),
-        Command::Quick(args) => quick(args),
-        Command::Rustfmt => vec![rustfmt()],
-        Command::Clippy(args) => vec![clippy(args)],
-        Command::Test(args) => vec![test(args)],
-        Command::Build(args) => vec![build(args)],
-        Command::Tarpaulin(args) => vec![tarpaulin(args)],
-        Command::Miri(args) => miri(args).into(),
-        Command::Docs(args) => vec![docs(args)],
-        Command::Deps => deps().into(),
+        Ci::All(args) => all(args),
+        Ci::Quick(args) => quick(args),
+        Ci::Rustfmt => vec![rustfmt()],
+        Ci::Clippy(args) => vec![clippy(args)],
+        Ci::Test(args) => vec![test(args)],
+        Ci::Build(args) => vec![build(args)],
+        Ci::Tarpaulin(args) => vec![tarpaulin(args)],
+        Ci::Miri(args) => miri(args).into(),
+        Ci::Docs(args) => vec![docs(args)],
+        Ci::Deps => deps().into(),
     }
 }
 
