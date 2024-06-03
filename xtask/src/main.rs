@@ -41,8 +41,11 @@ use std::{process, process::ExitCode};
 
 use lazy_errors::{prelude::*, Result};
 
+type TaskList = Vec<CommandLine>;
+type CommandLine = Vec<&'static str>;
+
 #[derive(clap::Parser, Copy, Clone, PartialEq, Hash, Eq)]
-enum Cli
+enum Command
 {
     /// Runs the CI quality gate or parts thereof
     /// in the workspace on your local machine.
@@ -66,27 +69,33 @@ fn main() -> ExitCode
 fn run() -> Result<()>
 {
     let args = parse_args_from_env()?;
-    let tasks = ci::tasklist_from(&args);
+    let tasks = tasklist_from(&args);
 
     exec_all(&tasks)
 }
 
 #[cfg(not(tarpaulin_include))]
-fn parse_args_from_env() -> Result<ci::Command>
+fn parse_args_from_env() -> Result<Command>
 {
     parse_args(std::env::args_os())
 }
 
-fn parse_args<IntoIter, T>(args: IntoIter) -> Result<ci::Command>
+fn parse_args<IntoIter, T>(args: IntoIter) -> Result<Command>
 where
     IntoIter: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
     use clap::Parser;
 
-    let Cli::Ci(args) = Cli::try_parse_from(args).or_wrap()?;
+    let command = Command::try_parse_from(args).or_wrap()?;
 
-    Ok(args)
+    Ok(command)
+}
+
+fn tasklist_from(command: &Command) -> TaskList
+{
+    let Command::Ci(args) = command;
+    ci::tasklist_from(args)
 }
 
 fn exec_all<L>(tasklist: &[L]) -> Result<()>

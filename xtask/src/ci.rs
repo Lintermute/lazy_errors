@@ -22,6 +22,8 @@ use std::env;
 
 use clap::ArgAction;
 
+use super::{CommandLine, TaskList};
+
 #[derive(clap::Subcommand, Copy, Clone, PartialEq, Hash, Eq)]
 pub enum Command
 {
@@ -309,8 +311,6 @@ enum Profile
     Release,
 }
 
-type CommandLine = Vec<&'static str>;
-
 impl CheckArgs
 {
     fn new(profile: Profile) -> Self
@@ -397,7 +397,7 @@ impl std::fmt::Display for Profile
     }
 }
 
-pub fn tasklist_from(args: &Command) -> Vec<CommandLine>
+pub fn tasklist_from(args: &Command) -> TaskList
 {
     match args {
         Command::All(args) => all(args),
@@ -413,7 +413,7 @@ pub fn tasklist_from(args: &Command) -> Vec<CommandLine>
     }
 }
 
-fn all(args: &AllArgs) -> Vec<CommandLine>
+fn all(args: &AllArgs) -> TaskList
 {
     let mut tasklist = Vec::new();
 
@@ -446,12 +446,12 @@ fn all(args: &AllArgs) -> Vec<CommandLine>
     tasklist
 }
 
-fn quick(args: &QuickArgs) -> Vec<CommandLine>
+fn quick(args: &QuickArgs) -> TaskList
 {
     all(&AllArgs::from(args))
 }
 
-fn compile_and_test(args: &AllArgs, profile: Profile) -> Vec<CommandLine>
+fn compile_and_test(args: &AllArgs, profile: Profile) -> TaskList
 {
     let mut tasklist = Vec::new();
 
@@ -677,8 +677,6 @@ mod tests
     use lazy_errors::Result;
     use test_case::test_case;
 
-    use super::*;
-
     #[test_case(
         &["xtask", "ci", "all",
             "--profile=dev",
@@ -798,7 +796,7 @@ mod tests
         tasklist: &[&[&str]],
     ) -> Result<()>
     {
-        let tasks = tasklist_from(&crate::parse_args(args)?);
+        let tasks = crate::tasklist_from(&crate::parse_args(args)?);
         assert_eq!(&tasks, tasklist);
         Ok(())
     }
@@ -848,7 +846,7 @@ mod tests
     fn tasklist_contains(args: &[&str], task_sublist: &[&[&str]])
         -> Result<()>
     {
-        let mut tasks = tasklist_from(&crate::parse_args(args)?);
+        let mut tasks = crate::tasklist_from(&crate::parse_args(args)?);
         tasks.retain(|task| task_sublist.contains(&task.as_ref()));
         assert_eq!(&tasks, task_sublist);
         Ok(())
