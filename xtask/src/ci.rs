@@ -24,7 +24,7 @@ use clap::ArgAction;
 
 use super::{CommandLine, TaskList};
 
-#[derive(clap::Subcommand, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Subcommand, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub enum Ci
 {
     /// Runs the entire CI quality gate in the workspace on your local machine.
@@ -113,7 +113,7 @@ pub enum Ci
     Deps,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct AllArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -163,7 +163,7 @@ pub struct AllArgs
     skip_moving_targets: bool,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct QuickArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -248,7 +248,7 @@ pub struct QuickArgs
     skip_moving_targets: bool,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct CheckArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -256,7 +256,7 @@ pub struct CheckArgs
     profile: Profile,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct TestArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -268,7 +268,7 @@ pub struct TestArgs
     include_ignored_tests: bool,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct DocsArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -276,7 +276,7 @@ pub struct DocsArgs
     profile: Profile,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct BuildArgs
 {
     #[clap(long)]
@@ -284,7 +284,7 @@ pub struct BuildArgs
     profile: Profile,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct CoverageArgs
 {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
@@ -296,7 +296,7 @@ pub struct CoverageArgs
     include_ignored_tests: bool,
 }
 
-#[derive(clap::Args, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct MiriArgs
 {
     /// Run ignored tests as well.
@@ -304,7 +304,7 @@ pub struct MiriArgs
     include_ignored_tests: bool,
 }
 
-#[derive(clap::ValueEnum, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 enum Profile
 {
     Dev,

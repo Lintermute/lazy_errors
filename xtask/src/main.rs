@@ -44,7 +44,7 @@ use lazy_errors::{prelude::*, Result};
 type TaskList = Vec<CommandLine>;
 type CommandLine = Vec<&'static str>;
 
-#[derive(clap::Parser, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Parser, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 enum Xtask
 {
     /// Runs the CI quality gate or parts thereof
