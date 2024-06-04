@@ -41,10 +41,9 @@ use std::{process, process::ExitCode};
 use ci::Ci;
 use lazy_errors::{prelude::*, Result};
 
-type TaskList = Vec<CommandLine>;
 type CommandLine = Vec<&'static str>;
 
-#[derive(clap::Parser, Debug, Copy, Clone, PartialEq, Hash, Eq)]
+#[derive(clap::Parser, Debug, Clone, PartialEq, Hash, Eq)]
 enum Xtask
 {
     /// Runs the CI quality gate or parts thereof
@@ -68,10 +67,11 @@ fn main() -> ExitCode
 #[cfg(not(tarpaulin_include))]
 fn run() -> Result<()>
 {
-    let args = parse_args_from_env()?;
-    let tasks = tasklist_from(&args);
+    let command = parse_args_from_env()?;
 
-    exec_all(&tasks)
+    match command {
+        Xtask::Ci(command) => ci::run(&command),
+    }
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -90,12 +90,6 @@ where
     let command = Xtask::try_parse_from(args).or_wrap()?;
 
     Ok(command)
-}
-
-fn tasklist_from(command: &Xtask) -> TaskList
-{
-    let Xtask::Ci(args) = command;
-    ci::tasklist_from(args)
 }
 
 fn exec_all<L>(tasklist: &[L]) -> Result<()>

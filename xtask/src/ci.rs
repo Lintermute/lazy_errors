@@ -21,8 +21,11 @@
 use std::env;
 
 use clap::ArgAction;
+use lazy_errors::Result;
 
-use super::{CommandLine, TaskList};
+use super::CommandLine;
+
+type TaskList = Vec<CommandLine>;
 
 #[derive(clap::Subcommand, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub enum Ci
@@ -397,7 +400,12 @@ impl std::fmt::Display for Profile
     }
 }
 
-pub fn tasklist_from(args: &Ci) -> TaskList
+pub fn run(command: &Ci) -> Result<()>
+{
+    crate::exec_all(&tasklist_from(command))
+}
+
+fn tasklist_from(args: &Ci) -> TaskList
 {
     match args {
         Ci::All(args) => all(args),
@@ -677,6 +685,8 @@ mod tests
     use lazy_errors::Result;
     use test_case::test_case;
 
+    use super::*;
+
     #[test_case(
         &["xtask", "ci", "all",
             "--profile=dev",
@@ -796,7 +806,7 @@ mod tests
         tasklist: &[&[&str]],
     ) -> Result<()>
     {
-        let tasks = crate::tasklist_from(&crate::parse_args(args)?);
+        let tasks = tasklist_from(&parse_ci_args(args)?);
         assert_eq!(&tasks, tasklist);
         Ok(())
     }
@@ -846,9 +856,16 @@ mod tests
     fn tasklist_contains(args: &[&str], task_sublist: &[&[&str]])
         -> Result<()>
     {
-        let mut tasks = crate::tasklist_from(&crate::parse_args(args)?);
+        let mut tasks = super::tasklist_from(&parse_ci_args(args)?);
         tasks.retain(|task| task_sublist.contains(&task.as_ref()));
         assert_eq!(&tasks, task_sublist);
         Ok(())
+    }
+
+    fn parse_ci_args(args: &[&str]) -> Result<Ci>
+    {
+        match crate::parse_args(args)? {
+            crate::Xtask::Ci(args) => Ok(args),
+        }
     }
 }
