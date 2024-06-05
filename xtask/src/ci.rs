@@ -18,6 +18,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+//! Tests, builds, runs all lints, validates dependencies, and
+//! runs MIRI tests as well.
+//!
+//! Several tasks can be skipped or run individually.
+//! Please refer to the [CLI documentation](Ci) for details.
+
 use std::env;
 
 use clap::ArgAction;
@@ -866,6 +872,7 @@ mod tests
     {
         match crate::parse_args(args)? {
             crate::Xtask::Ci(args) => Ok(args),
+            other => panic!("Unexpected args type: {other:?}"),
         }
     }
 }

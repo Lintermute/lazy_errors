@@ -20,10 +20,8 @@
 
 #![forbid(unsafe_code)]
 
-//! Tests, builds, runs all lints, and validates dependencies.
-//! Runs MIRI tests as well.
-//!
-//! Several tasks can be skipped, please refer to the [CLI documentation](Ci).
+//! Helper tool to run the CI pipeline locally (`cargo xtask ci`) or
+//! set the version based on `git describe` (`cargo xtask version`).
 //!
 //! The implementation of the `xtask` workspace and `cargo xtask`
 //! is based on [the blog post “Make Your Own Make” by matklad][MYOM]
@@ -35,11 +33,14 @@
 //! [Robbepop]: https://github.com/Robbepop
 
 mod ci;
+mod version;
 
-use std::{process, process::ExitCode};
+use core::str;
+use std::process::{self, ExitCode, Stdio};
 
 use ci::Ci;
 use lazy_errors::{prelude::*, Result};
+use version::Version;
 
 type CommandLine = Vec<&'static str>;
 
@@ -50,6 +51,10 @@ enum Xtask
     /// in the workspace on your local machine.
     #[command(subcommand)]
     Ci(Ci),
+
+    /// Manipulates the `version` attribute in `Cargo.toml` and `Cargo.lock`.
+    #[command(subcommand)]
+    Version(Version),
 }
 
 #[cfg(not(tarpaulin_include))]
@@ -71,6 +76,7 @@ fn run() -> Result<()>
 
     match command {
         Xtask::Ci(command) => ci::run(&command),
+        Xtask::Version(command) => version::run(&command),
     }
 }
 
@@ -104,6 +110,17 @@ where L: AsRef<[&'static str]>
 
 fn exec(command_with_args: &[&str]) -> Result<()>
 {
+    exec_impl(command_with_args, false)?;
+    Ok(())
+}
+
+fn exec_and_capture(command_with_args: &[&str]) -> Result<String>
+{
+    exec_impl(command_with_args, true)
+}
+
+fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String>
+{
     let (command, args) = match command_with_args {
         [head, tail @ ..] => (head, tail),
         _ => return Err(err!("No command passed.")),
@@ -111,19 +128,84 @@ fn exec(command_with_args: &[&str]) -> Result<()>
 
     eprintln!("Starting '{}'...", command_with_args.join(" "));
 
-    let status_code = process::Command::new(command)
-        .args(args)
-        .status()
-        .map(|status| status.code());
+    let mut handle = process::Command::new(command);
 
-    let result = match status_code {
-        Ok(Some(0)) => Ok(()),
-        Ok(Some(e)) => Err(err!("Status code was {e}")),
-        Ok(None) => Err(err!("No status code (terminated by signal?)")),
-        Err(e) => Err(Error::wrap_with(e, "Failed to start process")),
+    if capture {
+        handle
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+    }
+
+    let mut errs =
+        ErrorStash::new(|| format!("Failed to run {command_with_args:?}"));
+
+    let process = match handle
+        .args(args)
+        .spawn()
+        .or_wrap_with::<Stashable>(|| "Failed to start process")
+        .and_then(|process| process.wait_with_output().or_wrap())
+        .or_stash(&mut errs)
+    {
+        StashedResult::Ok(p) => p,
+        StashedResult::Err(errs) => {
+            // TODO: The `Try` trait on `StashedResult` would simplify this.
+            // Keep this here as an example how that trait could work.
+            let mut swap = StashWithErrors::from("DUMMY", "DUMMY");
+            std::mem::swap(&mut swap, errs);
+            return Err(swap.into());
+        },
     };
 
-    result.or_wrap_with(|| format!("Failed to run {command_with_args:?}"))
+    let stdout = str_or_stash(&process.stdout, &mut errs);
+    let stderr = str_or_stash(&process.stderr, &mut errs);
+
+    let err = |msg: &str| {
+        if !capture {
+            err!("{msg}")
+        } else {
+            err!("{msg}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+        }
+    };
+
+    let status: Result<()> = match process.status.code() {
+        Some(0) => Ok(()),
+        Some(c) => Err(err(&format!("Status code was {c}"))),
+        None => Err(err("No status code (terminated by signal?)")),
+    };
+
+    match status.or_stash(&mut errs) {
+        StashedResult::Ok(()) => {
+            Result::<()>::from(errs)?; // TODO: Add syntactic sugar
+            Ok(stdout.to_owned())
+        },
+        StashedResult::Err(errs) => {
+            // TODO: The `Try` trait on `StashedResult` would simplify this.
+            // Keep this here as an example how that trait could work.
+            let mut swap = StashWithErrors::from("DUMMY", "DUMMY");
+            std::mem::swap(&mut swap, errs);
+            Err(swap.into())
+        },
+    }
+}
+
+fn str_or_stash<'a, F, M>(
+    bytes: &'a [u8],
+    errs: &mut ErrorStash<F, M>,
+) -> &'a str
+where
+    F: FnOnce() -> M,
+    M: std::fmt::Display,
+{
+    match str::from_utf8(bytes)
+        .map(str::trim)
+        .or_wrap_with::<Stashable>(|| {
+            "Cannot create string: Invalid byte(s): {bytes}"
+        })
+        .or_stash(errs)
+    {
+        StashedResult::Ok(output) => output,
+        StashedResult::Err(_) => "",
+    }
 }
 
 #[cfg(test)]
@@ -153,6 +235,20 @@ mod tests
     fn exec_can_invoke_cargo() -> Result<()>
     {
         exec_all(&[&["cargo", "version"]])
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn exec_returns_cargo_version() -> Result<()>
+    {
+        let version = exec_and_capture(&["cargo", "version"])?;
+        dbg!(&version);
+
+        // Loosely assert that we got some output from the process.
+        assert!(version.starts_with("cargo"));
+        assert!(version.contains('.'));
+
+        Ok(())
     }
 
     #[test_case(
