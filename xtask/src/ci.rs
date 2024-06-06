@@ -166,8 +166,8 @@ pub struct AllArgs
     ///
     /// Use this flag to validate old commits, e.g. with `git bisect`.
     /// When this flag is present, the process will run `cargo check` instead
-    /// of `cargo clippy` and will skip the `cargo fmt`, `cargo tarpaulin`,
-    /// as well as the dependency checks.
+    /// of `cargo clippy` and will skip `cargo fmt`, `cargo tarpaulin`,
+    /// `cargo miri test`, as well as the dependency checks.
     #[clap(long)]
     skip_moving_targets: bool,
 }
