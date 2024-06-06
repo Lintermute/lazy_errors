@@ -1,0 +1,86 @@
+# Copyright (c) 2024 Andreas Waidler
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+
+  validate:
+    uses: ./.github/workflows/validate.yaml
+
+  publish:
+    needs: validate
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+
+    steps:
+
+    # Fetch all tags since the earliest release that we (still) want to
+    # include in the changelog generation process.
+    # Fetch the history of the current HEAD since that date as well,
+    # so `git tag --merged` shows which tags are actually part of HEAD.
+    # TODO: Use `--shallow-since $DATE` when it's not buggy anymore.
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-edit
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-edit
+
+    # Import the version number from git and write it to Cargo.{lock,toml}.
+    #
+    # FYI: https://github.com/rust-lang/cargo/issues/6583
+    # TODO: Maybe move version setting from xtask into build.rs.
+    - name: Set version number
+      run: >
+        cargo xtask version
+        import git-describe --accept=major-minor-patch
+
+    # Create a temporary commit to allow running `cargo publish`
+    # without having to use `--allow-dirty` (may be too permissive).
+    - name: Whitelist changed files
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
+        git commit -m 'Set version number' Cargo.lock '*/Cargo.toml'
+
+    - name: Publish crate
+      run: >
+        cargo publish
+        --package lazy_errors
+        --token ${{ secrets.CRATES_IO_API_TOKEN }}
+
+    # TODO: When the changelog generation process is automated,
+    # stop attaching the entire file and instead just use the _new_ part
+    # as parameter for `body` or `body_path`.
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: CHANGELOG.md
