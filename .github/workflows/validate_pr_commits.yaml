@@ -61,9 +61,10 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo xtask ci rustfmt'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo xtask ci rustfmt &&
+        git checkout Cargo.lock'
 
 
   build:
@@ -97,11 +98,12 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo xtask ci clippy --profile ${{ matrix.profile }}'
-        --exec 'cargo xtask ci test   --profile ${{ matrix.profile }}'
-        --exec 'cargo xtask ci build  --profile ${{ matrix.profile }}'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo xtask ci clippy --profile ${{ matrix.profile }} &&
+        cargo xtask ci test   --profile ${{ matrix.profile }} &&
+        cargo xtask ci build  --profile ${{ matrix.profile }} &&
+        git checkout Cargo.lock'
 
 
   coverage:
@@ -136,9 +138,10 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo xtask ci tarpaulin --profile ${{ matrix.profile }}'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo xtask ci tarpaulin --profile ${{ matrix.profile }} &&
+        git checkout Cargo.lock'
 
 
   miri:
@@ -172,10 +175,11 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo install --path xtask'
-        --exec 'xtask ci miri'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo install --path xtask &&
+        xtask ci miri &&
+        git checkout Cargo.lock'
 
 
   docs:
@@ -206,9 +210,10 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo xtask ci docs --profile ${{ matrix.profile }}'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo xtask ci docs --profile ${{ matrix.profile }} &&
+        git checkout Cargo.lock'
 
 
   deps:
@@ -238,6 +243,7 @@ jobs:
       run: >
         git rebase
         --fork-point origin/${{ github.base_ref }}
-        --exec 'cargo update'
-        --exec 'cargo xtask ci deps'
-        --exec 'git checkout Cargo.lock'
+        --exec '
+        cargo update &&
+        cargo xtask ci deps &&
+        git checkout Cargo.lock'
