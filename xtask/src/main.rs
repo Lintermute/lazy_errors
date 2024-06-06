@@ -731,7 +731,7 @@ fn miri(args: &MiriArgs) -> [CommandLine; 3]
 fn deps() -> [CommandLine; 3]
 {
     let upgrades = vec!["cargo", "upgrades"];
-    let update = vec!["cargo", "--locked", "update", "--workspace"];
+    let update = vec!["cargo", "--locked", "update"];
     let audit = vec!["cargo", "--locked", "audit", "--deny", "warnings"];
 
     [upgrades, update, audit]
@@ -853,7 +853,7 @@ mod tests
                 "--feature-powerset", "--optional-deps"],
             &["cargo", "+nightly", "--locked", "clean"],
             &["cargo", "upgrades"],
-            &["cargo", "--locked", "update", "--workspace"],
+            &["cargo", "--locked", "update"],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
         ]; "default tasklist")]
     #[test_case(

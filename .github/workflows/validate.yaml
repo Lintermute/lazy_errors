@@ -92,10 +92,6 @@ jobs:
       with:
         components: rustfmt
 
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
-
     - name: Run rustfmt
       run: cargo xtask ci rustfmt
 
@@ -127,10 +123,6 @@ jobs:
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack
-
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
 
     - name: Run clippy
       run: cargo xtask ci clippy --profile ${{ matrix.profile }}
@@ -171,10 +163,6 @@ jobs:
       with:
         tool: cargo-tarpaulin
 
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
-
     - name: Check coverage
       run: cargo xtask ci tarpaulin --profile ${{ matrix.profile }}
 
@@ -204,10 +192,6 @@ jobs:
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack
-
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
 
     # FIXME: `xtask ci miri` runs `cargo clean`, deleting its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
@@ -243,10 +227,6 @@ jobs:
       with:
         tool: cargo-hack
 
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
-
     - name: Build documentation
       run: cargo xtask ci docs --profile ${{ matrix.profile }}
 
@@ -275,12 +255,6 @@ jobs:
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-upgrades
-
-    # Let's see if HEAD works with a (semver) up-to-date set of dependencies.
-    # The Cargo.lock of library crates is not published / used by other people.
-    # TODO: If we're a binary crate, FAIL if we're using outdated dependencies.
-    - name: Update Cargo.lock
-      run: cargo update
 
     - name: Check dependencies
       run: cargo xtask ci deps
