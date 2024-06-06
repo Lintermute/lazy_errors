@@ -60,11 +60,8 @@ jobs:
     - name: Run rustfmt
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo xtask ci rustfmt &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo xtask ci rustfmt'
 
 
   build:
@@ -97,13 +94,10 @@ jobs:
     - name: Build and test
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo xtask ci clippy --profile ${{ matrix.profile }} &&
-        cargo xtask ci test   --profile ${{ matrix.profile }} &&
-        cargo xtask ci build  --profile ${{ matrix.profile }} &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo xtask ci clippy --profile ${{ matrix.profile }}'
+        --exec 'cargo xtask ci test   --profile ${{ matrix.profile }}'
+        --exec 'cargo xtask ci build  --profile ${{ matrix.profile }}'
 
 
   coverage:
@@ -137,11 +131,8 @@ jobs:
     - name: Check coverage
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo xtask ci tarpaulin --profile ${{ matrix.profile }} &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo xtask ci tarpaulin --profile ${{ matrix.profile }}'
 
 
   miri:
@@ -174,12 +165,9 @@ jobs:
     - name: Run MIRI tests
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo install --path xtask &&
-        xtask ci miri &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci miri'
 
 
   docs:
@@ -209,11 +197,8 @@ jobs:
     - name: Build documentation
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo xtask ci docs --profile ${{ matrix.profile }} &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo xtask ci docs --profile ${{ matrix.profile }}'
 
 
   deps:
@@ -237,13 +222,8 @@ jobs:
       with:
         tool: cargo-upgrades
 
-    # The Cargo.lock of library crates is not published / used by other people.
-    # TODO: If we're a binary crate, FAIL if we're using outdated dependencies.
     - name: Check dependencies
       run: >
         git rebase
-        --fork-point origin/${{ github.base_ref }}
-        --exec '
-        cargo update &&
-        cargo xtask ci deps &&
-        git checkout Cargo.lock'
+        --fork-point 'origin/${{ github.base_ref }}'
+        --exec 'cargo xtask ci deps'
