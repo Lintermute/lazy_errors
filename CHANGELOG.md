@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New Changes
 
+### Added
+
+- Add `ErrorStash::into_result()`
+
 ## [`v0.1.1`] (2024-05-24)
 
 ### Fixed
