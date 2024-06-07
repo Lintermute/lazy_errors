@@ -32,6 +32,8 @@ jobs:
 
   publish:
     needs: validate
+    permissions:
+      contents: write
     timeout-minutes: 15
     runs-on: ubuntu-latest
 
