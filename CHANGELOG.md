@@ -2,7 +2,7 @@
 
 This file documents all changes affecting the [semver] version of this project.
 
-## New Changes
+## New in this release
 
 ### Added
 
