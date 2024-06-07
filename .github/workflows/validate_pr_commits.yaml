@@ -44,8 +44,14 @@ jobs:
 
     steps:
 
-    # Avoid linter errors due to changed line endings
-    - run: git config --global core.autocrlf false
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    # Also, sometimes there are linter errors due to changed line endings.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
+        git config --global core.autocrlf false
 
     - uses: actions/checkout@v4
       with:
@@ -75,6 +81,13 @@ jobs:
         profile: [ dev, release ]
 
     steps:
+
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
 
     - uses: actions/checkout@v4
       with:
@@ -111,6 +124,13 @@ jobs:
 
     steps:
 
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
+
     - uses: actions/checkout@v4
       with:
         ref: ${{ github.head_ref }}
@@ -144,6 +164,13 @@ jobs:
         system: [ ubuntu-latest, windows-latest, macos-latest ]
 
     steps:
+
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
 
     - uses: actions/checkout@v4
       with:
@@ -181,6 +208,13 @@ jobs:
 
     steps:
 
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
+
     - uses: actions/checkout@v4
       with:
         ref: ${{ github.head_ref }}
@@ -208,6 +242,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+    # For whatever reason, Git needs user name and email for the rebase
+    # on some agents but not on others.
+    - name: Configure Git
+      run: |
+        git config --global user.email "runner@github.com"
+        git config --global user.name "GitHub, Runner"
 
     - uses: actions/checkout@v4
       with:
