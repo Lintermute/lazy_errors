@@ -178,3 +178,65 @@ where E: Into<I>
         }
     }
 }
+
+impl<'s, T, E> StashedResult<'s, T, E>
+{
+    /// Returns `Some(t)` if `self` is `Ok(t)`, `None` otherwise.
+    ///
+    /// This method is useful to discard the `&mut` borrowing of the
+    /// [`ErrorStash`]/[`StashWithErrors`] that was passed as parameter
+    /// to [`or_stash`](OrStash::or_stash).
+    /// You may need to do this if you have multiple `or_stash` statements
+    /// and want to extract the `Ok(T)` result from them later.
+    /// For example, the following example would fail to compile
+    /// without calling `ok` (due to borrowing `errs` mutably twice):
+    ///
+    /// ```
+    /// # use core::str::FromStr;
+    /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// fn parse_version(major: &str, minor: &str) -> Result<(u32, u32)>
+    /// {
+    ///     let mut errs = ErrorStash::new(|| "Invalid version number");
+    ///
+    ///     let major = u32::from_str(major)
+    ///         .or_stash(&mut errs)
+    ///         .ok();
+    ///
+    ///     let minor = u32::from_str(minor)
+    ///         .or_stash(&mut errs)
+    ///         .ok();
+    ///
+    ///     // Return _all_ errors if major, minor, or both were invalid.
+    ///     errs.into_result()?;
+    ///
+    ///     // If the result above was `Ok`, all `ok()` calls returned `Some`.
+    ///     Ok((major.unwrap(), minor.unwrap()))
+    /// }
+    ///
+    /// assert_eq!(parse_version("42", "1337").unwrap(), (42, 1337));
+    ///
+    /// assert_eq!(
+    ///     parse_version("42", "-1")
+    ///         .unwrap_err()
+    ///         .childs()
+    ///         .len(),
+    ///     1
+    /// );
+    ///
+    /// assert_eq!(
+    ///     parse_version("-1", "-1")
+    ///         .unwrap_err()
+    ///         .childs()
+    ///         .len(),
+    ///     2
+    /// );
+    /// ```
+    pub fn ok(self) -> Option<T>
+    {
+        match self {
+            StashedResult::Ok(t) => Some(t),
+            StashedResult::Err(_) => None,
+        }
+    }
+}

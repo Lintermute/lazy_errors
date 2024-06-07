@@ -5,6 +5,7 @@ This file documents all changes affecting the [semver] version of this project.
 ## New in this release
 
 - Add crate `keywords` and `categories`
+- Add StashedResult::ok()
 
 ## [`v0.2.0`] (2024-06-07)
 
