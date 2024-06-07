@@ -50,11 +50,13 @@ jobs:
     steps:
 
     # For whatever reason, Git needs user name and email for the rebase
-    # in this pipeline, but not in others.
+    # on some agents but not on others.
+    # Also, sometimes there are linter errors due to changed line endings.
     - name: Configure Git
       run: |
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
+        git config --global core.autocrlf false
 
     - uses: actions/checkout@v4
       with:
