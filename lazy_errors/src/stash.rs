@@ -274,6 +274,50 @@ where
             ErrorStash::WithErrors(stash) => stash.errors(),
         }
     }
+
+    /// Returns `Ok(())` if the stash is empty, otherwise returns an `Err`
+    /// containing all errors from this stash.
+    ///
+    /// You can usually call `ErrorStash::into()` instead of this method.
+    /// This method actually does nothing else (besides specifying
+    /// the return type). However, Rust sometimes cannot figure out
+    /// which type you want to convert into, in that case this method
+    /// may be more readable than specifying the concrete types.
+    /// For example:
+    ///
+    /// ```
+    /// # use core::str::FromStr;
+    /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// fn count_numbers(nums: &[&str]) -> Result<usize>
+    /// {
+    ///     let mut errs = ErrorStash::new(|| "Something wasn't a number");
+    ///
+    ///     for n in nums {
+    ///         i32::from_str(n).or_stash(&mut errs);
+    ///     }
+    ///
+    ///     // errs.into()?; // Does not compile
+    ///     // Result::<()>::from(errs)?; // Works but is hard to read and type
+    ///     errs.into_result()?; // Much nicer
+    ///
+    ///     Ok(nums.len())
+    /// }
+    ///
+    /// assert_eq!(count_numbers(&["42"]).unwrap(), 1);
+    /// assert!(count_numbers(&["42", ""]).is_err());
+    /// ```
+    ///
+    /// In case there was at least one error in this stash,
+    /// the [`Error`] will hold the [`ErrorData::Stashed`] variant
+    /// which contains a [`StashedErrors`] object.
+    ///
+    /// [`ErrorData::Stashed`]: crate::ErrorData::Stashed
+    /// [`StashedErrors`]: crate::StashedErrors
+    pub fn into_result(self) -> Result<(), Error<I>>
+    {
+        self.into()
+    }
 }
 
 impl<I> StashWithErrors<I>

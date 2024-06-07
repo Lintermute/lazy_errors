@@ -175,7 +175,7 @@ fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String>
 
     match status.or_stash(&mut errs) {
         StashedResult::Ok(()) => {
-            Result::<()>::from(errs)?; // TODO: Add syntactic sugar
+            errs.into_result()?;
             Ok(stdout.to_owned())
         },
         StashedResult::Err(errs) => {
