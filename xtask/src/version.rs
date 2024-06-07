@@ -105,7 +105,7 @@ impl FromStr for MajorMinorPatch
 
         // TODO: The `Try` trait on `StashedResult` would simplify these blocks.
         // We'll keep this here as an example how the `Try` trait could work.
-        let [major, minor, patch] = match s
+        let tokens: [&str; 3] = match s
             .split('.')
             .collect::<Vec<_>>()
             .try_into()
@@ -122,23 +122,19 @@ impl FromStr for MajorMinorPatch
             },
         };
 
-        let mut parse_or_stash = |token: &str| -> u16 {
-            u16::from_str(token).unwrap_or_else(|_| {
-                errs.push(format!("Not a valid number: '{token}'"));
-                u16::default()
-            })
-        };
+        let [major, minor, patch] = tokens.map(|tok| {
+            u16::from_str(tok)
+                .map_err(|_| -> Error { err!("Not a valid number: '{s}'") })
+                .or_stash(&mut errs)
+                .ok()
+        });
 
-        let major = parse_or_stash(major);
-        let minor = parse_or_stash(minor);
-        let patch = parse_or_stash(patch);
-
-        Result::<()>::from(errs)?;
+        errs.into_result()?;
 
         Ok(Self {
-            major,
-            minor,
-            patch,
+            major: major.unwrap(),
+            minor: minor.unwrap(),
+            patch: patch.unwrap(),
         })
     }
 }
