@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+- Add crate `keywords` and `categories`
+
 ## [`v0.2.0`] (2024-06-07)
 
 ### Added
