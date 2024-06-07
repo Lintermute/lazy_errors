@@ -46,6 +46,12 @@ jobs:
       with:
         fetch-depth: 0
 
+    # All tags are here but the one that triggered this workflow
+    # will not be found by `git describe` yet. See:
+    # https://github.com/actions/checkout/issues/290
+    - name: Fetch missing tags
+      run: git fetch --force --tags
+
     - name: Install stable Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
