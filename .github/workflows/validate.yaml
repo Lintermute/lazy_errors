@@ -81,7 +81,7 @@ jobs:
         case "${{ github.event_name }}" in
             "push") branches="[ \"${{ github.ref_name }}\" ]" ;;
             "pull_request") branches="[ \"${{ github.ref }}\" ]" ;;
-            "schedule") branches="[ \"dev/0.1\", \"pub/0.1\" ]" ;;
+            "schedule") branches="[ \"dev/0.1\" ]" ;;
             *)
                 echo "Unknown event: ${{ github.event_name }}" >&2
                 exit 1
