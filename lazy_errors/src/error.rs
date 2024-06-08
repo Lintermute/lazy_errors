@@ -464,8 +464,8 @@ impl<I: Display> Display for StashedErrors<I>
         let is_pretty = f.alternate(); // `#` in format string
 
         match (errors, locations, is_pretty) {
-            ([], ..) => unreachable!("{summary}: 0 errors"),
-            (_, [], ..) => unreachable!("{summary}: 0 source locations"),
+            ([], ..) => write!(f, "{summary}: 0 errors"),
+            (_, [], ..) => write!(f, "{summary}: 0 source locations"),
             ([e], _, false) => write!(f, "{summary}: {e}"),
             (errs, _, false) => {
                 write!(f, "{summary} ({} errors)", errs.len())
