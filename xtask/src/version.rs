@@ -20,7 +20,7 @@
 
 use std::{fmt::Display, str::FromStr};
 
-use lazy_errors::{prelude::*, Result};
+use lazy_errors::{prelude::*, try2, Result};
 
 #[derive(clap::Subcommand, Debug, Clone, PartialEq, Hash, Eq)]
 pub enum Version
@@ -103,24 +103,14 @@ impl FromStr for MajorMinorPatch
             format!("Doesn't match MAJOR.MINOR.PATCH: '{s}'")
         });
 
-        // TODO: The `Try` trait on `StashedResult` would simplify these blocks.
-        // We'll keep this here as an example how the `Try` trait could work.
-        let tokens: [&str; 3] = match s
+        let tokens: [&str; 3] = try2!(s
             .split('.')
             .collect::<Vec<_>>()
             .try_into()
             .map_err(|_| {
                 Error::from_message("Invalid number of parts separated by '.'")
             })
-            .or_stash(&mut errs)
-        {
-            StashedResult::Ok(x) => x,
-            StashedResult::Err(errs) => {
-                let mut swap = StashWithErrors::from("DUMMY", "DUMMY");
-                std::mem::swap(&mut swap, errs);
-                return Err(swap.into());
-            },
-        };
+            .or_stash(&mut errs));
 
         let [major, minor, patch] = tokens.map(|tok| {
             u16::from_str(tok)
