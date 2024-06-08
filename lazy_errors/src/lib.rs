@@ -684,6 +684,7 @@ mod or_wrap_with;
 mod reportable;
 mod stash;
 mod stashable;
+mod try2;
 
 pub use error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 #[cfg(feature = "eyre")]

@@ -39,7 +39,7 @@ use core::str;
 use std::process::{self, ExitCode, Stdio};
 
 use ci::Ci;
-use lazy_errors::{prelude::*, Result};
+use lazy_errors::{prelude::*, try2, Result};
 use version::Version;
 
 type CommandLine = Vec<&'static str>;
@@ -139,22 +139,12 @@ fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String>
     let mut errs =
         ErrorStash::new(|| format!("Failed to run {command_with_args:?}"));
 
-    let process = match handle
+    let process = try2!(handle
         .args(args)
         .spawn()
         .or_wrap_with::<Stashable>(|| "Failed to start process")
         .and_then(|process| process.wait_with_output().or_wrap())
-        .or_stash(&mut errs)
-    {
-        StashedResult::Ok(p) => p,
-        StashedResult::Err(errs) => {
-            // TODO: The `Try` trait on `StashedResult` would simplify this.
-            // Keep this here as an example how that trait could work.
-            let mut swap = StashWithErrors::from("DUMMY", "DUMMY");
-            std::mem::swap(&mut swap, errs);
-            return Err(swap.into());
-        },
-    };
+        .or_stash(&mut errs));
 
     let stdout = str_or_stash(&process.stdout, &mut errs);
     let stderr = str_or_stash(&process.stderr, &mut errs);

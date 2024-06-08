@@ -360,6 +360,39 @@ impl<I> StashWithErrors<I>
     {
         &self.errors
     }
+
+    /// Returns a [`StashWithErrors`] that's identical to `self`
+    /// by replacing the contents of `&mut self` with dummy values.
+    ///
+    /// Do not call this method. It must only be used for internal purposes.
+    /// This method is basically a wrapper for [`core::mem::swap`]
+    /// that also handles the `I` type parameter.
+    ///
+    /// For internal usage only. Even then: Take care when using this method.
+    /// Even if you have a `&mut`, you or your callers may not expect
+    /// the value to change “that much”.
+    /// This method should only be used by the [`try2!`] macro.
+    /// When the `Try` trait is stabilized, we can implement it
+    /// and remove the [`try2!`] macro and this method.
+    ///
+    /// [`try2!`]: crate::try2!
+    #[doc(hidden)]
+    pub fn take(&mut self) -> Self
+    {
+        // The dummy we'll be swapping into `self` should never “leak”,
+        // if this type is used correctly.
+        // But better print a specific error message in case it does.
+        const WARNING: &str = "Internal error: Error info cleared by take()";
+
+        let mut swap_with = Self {
+            summary:   WARNING.to_string().into_boxed_str(),
+            errors:    vec![],
+            locations: vec![],
+        };
+
+        core::mem::swap(&mut swap_with, self);
+        swap_with
+    }
 }
 
 fn display<I>(

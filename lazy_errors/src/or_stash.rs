@@ -115,24 +115,34 @@ pub trait OrStash<S, I, T>
     ///
     /// [`ErrorStash`]: crate::ErrorStash
     /// [`or_create_stash`]: crate::OrCreateStash::or_create_stash
-    fn or_stash(self, stash: &mut S) -> StashedResult<T, StashWithErrors<I>>;
+    fn or_stash(self, stash: &mut S) -> StashedResult<T, I>;
 }
 
-/// Similar to [`core::result::Result`] except that this type
-/// is deliberately _not_ `#[must_use]` and is designed for
-/// `E` to be either [`ErrorStash`] or [`StashWithErrors`].
+/// Similar to [`core::result::Result`], except that this type
+/// is deliberately _not_ `#[must_use]` and
+/// the error type is hardcoded as [`StashWithErrors`].
 ///
-/// The generic parameter `E` is stored as `&mut`. This _should_ allow
-/// chaining/nesting of [`or_stash`](OrStash::or_stash) calls
-/// in the future.
-/// Additionally, storing it as`&mut` _may_ allow us to implement
-/// the [`std::ops::Try`] trait in the future, adding support for
-/// the `?` operator. This _could_ be achieved by “stealing” ownership,
-/// similarly to [`std::mem::take`].
-pub enum StashedResult<'s, T, E>
+/// [`StashedResult`] is returned from [`or_stash`];
+/// there should be no need to create values of this type manually.
+/// Note that the [`StashWithErrors`] is kept as `&mut` and actually borrows
+/// the inner value from the `&mut` [`ErrorStash`] passed to [`or_stash`].
+/// Thus, if you want to keep the results of multiple [`or_stash`] calls
+/// around at the same time, in order to extract their `Ok(t)` values later,
+/// you need to call [`StashedResult::ok()`] on them.
+/// Otherwise you'll get ownership-related compilation errors.
+/// Check out [`or_stash`] for an example.
+///
+/// The reason we're keeping a reference to the [`StashWithErrors`] is
+/// that it allows you to use the [`try2!`] macro
+/// (and will probably allow you use the `?` operator in the future
+/// when the `Try` trait is stabilized).
+///
+/// [`try2!`]: crate::try2!
+/// [`or_stash`]: OrStash::or_stash
+pub enum StashedResult<'s, T, I>
 {
     Ok(T),
-    Err(&'s mut E),
+    Err(&'s mut StashWithErrors<I>),
 }
 
 impl<F, M, I, T, E> OrStash<ErrorStash<F, M, I>, I, T> for Result<T, E>
@@ -142,10 +152,7 @@ where
     M: Display,
 {
     #[track_caller]
-    fn or_stash(
-        self,
-        stash: &mut ErrorStash<F, M, I>,
-    ) -> StashedResult<T, StashWithErrors<I>>
+    fn or_stash(self, stash: &mut ErrorStash<F, M, I>) -> StashedResult<T, I>
     {
         match self {
             Ok(v) => StashedResult::Ok(v),
@@ -164,10 +171,7 @@ impl<I, T, E> OrStash<StashWithErrors<I>, I, T> for Result<T, E>
 where E: Into<I>
 {
     #[track_caller]
-    fn or_stash(
-        self,
-        stash: &mut StashWithErrors<I>,
-    ) -> StashedResult<T, StashWithErrors<I>>
+    fn or_stash(self, stash: &mut StashWithErrors<I>) -> StashedResult<T, I>
     {
         match self {
             Ok(v) => StashedResult::Ok(v),

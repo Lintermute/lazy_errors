@@ -4,6 +4,14 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- Hardcode `StashWithErrors` as `E` in `StashedResult`
+
+### Added
+
+- Add the `try2!` macro (`?` operator on `StashedResult`)
+
 ## [`v0.3.0`] (2024-06-07)
 
 ### Added
