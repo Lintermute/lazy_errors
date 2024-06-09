@@ -28,6 +28,7 @@ use alloc::{
 use crate::{
     error::{self, Location},
     Error,
+    StashedResult,
 };
 
 /// A builder for [`Error`] that keeps a list of errors
@@ -272,6 +273,97 @@ where
         match self {
             ErrorStash::Empty(_) => &[],
             ErrorStash::WithErrors(stash) => stash.errors(),
+        }
+    }
+
+    /// Returns `Ok(())` if the stash is empty,
+    /// otherwise returns [`StashedResult::Err`].
+    ///
+    /// This method basically allows you to use the `?` operator
+    /// (currently implemented in the form of the [`try2!`] macro)
+    /// on _all_ prior errors simultaneously.
+    ///
+    /// ```
+    /// use std::collections::HashMap;
+    ///
+    /// use lazy_errors::{prelude::*, try2, Result};
+    ///
+    /// // Always parses two configs, even if the first one contains an error.
+    /// // All errors or groups of errors returned from this function
+    /// // share the same error summary message.
+    /// fn configure(
+    ///     path_to_config_a: &str,
+    ///     path_to_config_b: &str,
+    /// ) -> Result<HashMap<String, String>>
+    /// {
+    ///     let mut errs = ErrorStash::new(|| "Invalid app config");
+    ///
+    ///     let config_a = parse_config(path_to_config_a)
+    ///         .or_stash(&mut errs)
+    ///         .ok();
+    ///
+    ///     let config_b = parse_config(path_to_config_b)
+    ///         .or_stash(&mut errs)
+    ///         .ok();
+    ///
+    ///     // If there was any error, bail out now.
+    ///     // If there were no errors, both configs can be unwrapped.
+    ///     try2!(errs.ok());
+    ///     let config_a = config_a.unwrap();
+    ///     let config_b = config_b.unwrap();
+    ///
+    ///     Ok(try2!(merge(config_a, config_b).or_stash(&mut errs)))
+    /// }
+    ///
+    /// fn parse_config(path: &str) -> Result<HashMap<String, String>>
+    /// {
+    ///     if path == "bad.cfg" {
+    ///         Err(err!("Config file contains an error"))
+    ///     } else {
+    ///         // ...
+    ///         Ok(HashMap::new())
+    ///     }
+    /// }
+    ///
+    /// fn merge(
+    ///     _a: HashMap<String, String>,
+    ///     _b: HashMap<String, String>,
+    /// ) -> Result<HashMap<String, String>>
+    /// {
+    ///     // ...
+    ///     Ok(HashMap::new())
+    /// }
+    ///
+    /// let err = configure("bad.cfg", "bad.cfg").unwrap_err();
+    /// assert_eq!(err.childs().len(), 2);
+    ///
+    /// let err = configure("good.cfg", "bad.cfg").unwrap_err();
+    /// assert_eq!(err.childs().len(), 1);
+    ///
+    /// assert!(configure("good.cfg", "good.cfg").is_ok());
+    /// ```
+    ///
+    /// This method is similar to [`ErrorStash::into_result`] or
+    /// `ErrorStash::into`. As opposed to these other methods, however,
+    /// [`ok`] does not consume `self`. It only borrows `self` mutably.
+    /// This allows you to continue adding errors later,
+    /// as soon as you have dropped the [`StashedResult`]
+    /// or called [`StashedResult::ok`] to discard the borrowed reference.
+    ///
+    /// This method enables you to place “barriers” in your code.
+    /// Before the “barrier”, you can collect multiple errors.
+    /// Then, at some pivotal check, you'll either return all previous errors
+    /// or keep going, knowing that no errors have occurred so far.
+    ///
+    /// [`ErrorData::Stashed`]: crate::ErrorData::Stashed
+    /// [`StashedErrors`]: crate::StashedErrors
+    /// [`ok`]: Self::ok
+    /// [`try2!`]: crate::try2!
+    pub fn ok(&mut self) -> StashedResult<(), I>
+    {
+        match self {
+            ErrorStash::Empty(_) => StashedResult::Ok(()),
+            ErrorStash::WithErrors(errs) => StashedResult::Err(errs),
         }
     }
 
