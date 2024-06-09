@@ -146,36 +146,28 @@ fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String>
         .and_then(|process| process.wait_with_output().or_wrap())
         .or_stash(&mut errs));
 
+    match process.status.code() {
+        Some(0) => (),
+        Some(c) => errs.push(format!("Status code was {c}")),
+        None => errs.push("No status code (terminated by signal?)"),
+    };
+
     let stdout = str_or_stash(&process.stdout, &mut errs);
     let stderr = str_or_stash(&process.stderr, &mut errs);
 
-    let err = |msg: &str| {
-        if !capture {
-            err!("{msg}")
-        } else {
-            err!("{msg}\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}")
+    if !errs.is_empty() && capture {
+        if !stdout.is_empty() {
+            errs.push(format!("STDOUT:\n{stdout}"));
         }
-    };
 
-    let status: Result<()> = match process.status.code() {
-        Some(0) => Ok(()),
-        Some(c) => Err(err(&format!("Status code was {c}"))),
-        None => Err(err("No status code (terminated by signal?)")),
-    };
-
-    match status.or_stash(&mut errs) {
-        StashedResult::Ok(()) => {
-            errs.into_result()?;
-            Ok(stdout.to_owned())
-        },
-        StashedResult::Err(errs) => {
-            // TODO: The `Try` trait on `StashedResult` would simplify this.
-            // Keep this here as an example how that trait could work.
-            let mut swap = StashWithErrors::from("DUMMY", "DUMMY");
-            std::mem::swap(&mut swap, errs);
-            Err(swap.into())
-        },
+        if !stderr.is_empty() {
+            errs.push(format!("STDERR:\n{stderr}"));
+        }
     }
+
+    errs.into_result()?;
+
+    Ok(stdout.to_owned())
 }
 
 fn str_or_stash<'a, F, M>(
@@ -186,16 +178,12 @@ where
     F: FnOnce() -> M,
     M: std::fmt::Display,
 {
-    match str::from_utf8(bytes)
+    str::from_utf8(bytes)
         .map(str::trim)
-        .or_wrap_with::<Stashable>(|| {
-            "Cannot create string: Invalid byte(s): {bytes}"
-        })
+        .or_wrap_with::<Stashable>(|| "Cannot create string: Invalid byte(s)")
         .or_stash(errs)
-    {
-        StashedResult::Ok(output) => output,
-        StashedResult::Err(_) => "",
-    }
+        .ok()
+        .unwrap_or_default()
 }
 
 #[cfg(test)]
@@ -259,5 +247,17 @@ mod tests
 
         dbg!(msg, expected_error);
         assert!(msg.starts_with(expected_error));
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn exec_propagates_stderr()
+    {
+        let err =
+            exec_and_capture(&["cargo", "unexisting-subcommand"]).unwrap_err();
+
+        let msg = &format!("{err:#}");
+        dbg!(msg);
+        assert!(msg.contains("- STDERR:\n"));
     }
 }
