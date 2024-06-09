@@ -259,8 +259,7 @@
 )]
 #![cfg_attr(
     feature = "eyre",
-    doc = r##"
-[`into_eyre_result`](IntoEyreResult::into_eyre_result) and
+    doc = r##"[`into_eyre_result`](IntoEyreResult::into_eyre_result) and
 [`into_eyre_report`](IntoEyreReport::into_eyre_report):
 
 ```
