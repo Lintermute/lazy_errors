@@ -7,7 +7,7 @@ edition = "2021"
 readme = "../README.md"
 authors = ["Andreas Waidler <lintermute@mailbox.org>"]
 repository = "https://github.com/Lintermute/lazy_errors"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 
 [features]
 eyre = ["std", "dep:color-eyre"]
