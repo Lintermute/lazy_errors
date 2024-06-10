@@ -637,33 +637,33 @@ dual licensed as above, without any additional terms or conditions.
  [__link0]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
  [__link1]: https://crates.io/crates/Reportable
  [__link10]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
- [__link11]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
- [__link12]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
- [__link13]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link11]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
+ [__link12]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
+ [__link13]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link14]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
  [__link15]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link16]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link16]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link17]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrCreateStash::or_create_stash
  [__link18]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrCreateStash::or_create_stash
  [__link19]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
  [__link2]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
- [__link20]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
- [__link21]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link20]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
+ [__link21]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link22]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link23]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link23]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link24]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
  [__link25]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link26]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link26]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link27]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
  [__link28]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
  [__link29]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
  [__link3]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
  [__link30]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link31]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link31]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link32]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
  [__link33]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
  [__link34]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link35]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link35]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link36]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
  [__link37]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=IntoEyreResult::into_eyre_result
  [__link38]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=IntoEyreReport::into_eyre_report
@@ -673,15 +673,15 @@ dual licensed as above, without any additional terms or conditions.
  [__link41]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
  [__link42]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrap::or_wrap
  [__link43]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link44]: Error#inner-error-type-i
- [__link45]: `err!`
+ [__link44]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link45]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/macro.err.html
  [__link46]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
  [__link47]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
  [__link48]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Result
  [__link49]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
  [__link5]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
  [__link50]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link51]: `&str`
+ [__link51]: https://doc.rust-lang.org/stable/alloc/?search=str
  [__link52]: https://doc.rust-lang.org/stable/alloc/?search=string::String
  [__link53]: https://doc.rust-lang.org/stable/std/?search=error::Error
  [__link54]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
@@ -690,9 +690,9 @@ dual licensed as above, without any additional terms or conditions.
  [__link57]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
  [__link58]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
  [__link59]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
- [__link6]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
- [__link60]: Error#inner-error-type-i
- [__link61]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link6]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
+ [__link60]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link61]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link62]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
  [__link63]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
  [__link64]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
@@ -700,6 +700,6 @@ dual licensed as above, without any additional terms or conditions.
  [__link66]: https://doc.rust-lang.org/stable/std/marker/trait.Sized.html
  [__link67]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
  [__link68]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link7]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
- [__link8]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=ErrorStash
+ [__link7]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
+ [__link8]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
  [__link9]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
