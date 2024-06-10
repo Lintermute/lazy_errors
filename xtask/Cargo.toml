@@ -2,7 +2,7 @@
 name = "xtask"
 edition = "2021"
 authors = ["Andreas Waidler <lintermute@mailbox.org>"]
-license = "MIT"
+license = "MIT OR Apache-2.0"
 publish = false
 
 [dependencies]
