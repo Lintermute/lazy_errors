@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Added
+
+- Add `ErrorStash::ok`
+
 ## [`v0.4.0`] (2024-06-08)
 
 ### Breaking Changes
