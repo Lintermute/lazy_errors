@@ -7,6 +7,9 @@ This file documents all changes affecting the [semver] version of this project.
 ### Added
 
 - Add `ErrorStash::ok`
+- Add Apache 2.0 license (project is now dual-licensed: MIT or Apache 2.0)
+- Add contribution info to `README.md`
+- Add rustdoc links and badges to `README.md`
 
 ## [`v0.4.0`] (2024-06-08)
 
