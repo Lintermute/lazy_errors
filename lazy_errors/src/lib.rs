@@ -4,38 +4,57 @@
 //! and defer error handling ergonomically.
 //!
 //! ```
-//! use lazy_errors::{prelude::*, Result};
+//! use core::str::FromStr;
 //!
-//! fn run() -> Result<()>
+//! use lazy_errors::{prelude::*, try2, Result};
+//!
+//! fn run(input1: &str, input2: &str) -> Result<()>
 //! {
-//!     let mut errs = ErrorStash::new(|| "Failed to run application");
+//!     let mut errs = ErrorStash::new(|| "There were one or more errors");
 //!
-//!     write_if_ascii("42").or_stash(&mut errs); // `errs` contains 0 errors
-//!     write_if_ascii("❌").or_stash(&mut errs); // `errs` contains 1 error
+//!     u8::from_str("42").or_stash(&mut errs); // `errs` contains 0 errors
+//!     u8::from_str("❌").or_stash(&mut errs); // `errs` contains 1 error
+//!     u8::from_str("1337").or_stash(&mut errs); // `errs` contains 2 errors
 //!
-//!     cleanup().or_stash(&mut errs); // Run cleanup even if there were errors,
-//!                                    // but cleanup is allowed to fail as well
+//!     // `input1` is very important in this example,
+//!     // so make sure it has a nice message.
+//!     let r: Result<u8> = u8::from_str(input1)
+//!         .or_wrap_with(|| format!("Input '{input1}' is invalid"));
 //!
-//!     errs.into() // `Ok(())` if `errs` was still empty, `Err` otherwise
+//!     // If `input1` is invalid, we don't want to continue
+//!     // but return _all_ errors that have occurred so far.
+//!     let input1: u8 = try2!(r.or_stash(&mut errs));
+//!     println!("input1 = {input1:#X}");
+//!
+//!     // Continue handling other `Result`s.
+//!     u8::from_str(input2).or_stash(&mut errs);
+//!
+//!     errs.into() // `Ok(())` if `errs` is still empty, `Err` otherwise
 //! }
-//! #
-//! # fn write_if_ascii(text: &str) -> Result<()>
-//! # {
-//! #     if text.is_ascii() {
-//! #         // ... write ...
-//! #         Ok(())
-//! #     } else {
-//! #         Err(err!("Input is not ASCII: '{text}'"))
-//! #     }
-//! # }
-//! #
-//! # fn cleanup() -> Result<()>
-//! # {
-//! #     Err(err!("Cleanup failed"))
-//! # }
 //!
-//! let errs = run().unwrap_err();
-//! assert_eq!(errs.childs().len(), 2);
+//! fn main()
+//! {
+//!     let err = run("❓", "❗").unwrap_err();
+//!     let n = err.childs().len();
+//!     eprintln!("Got {n} error(s).");
+//!     eprintln!("---------------------------------------------------------");
+//!     eprintln!("{err:#}");
+//! }
+//! ```
+//!
+//! Running the example will print:
+//!
+//! ```text
+//! Got 3 error(s).
+//! ---------------------------------------------------------
+//! There were one or more errors
+//! - invalid digit found in string
+//!   at src/main.rs:10:24
+//! - number too large to fit in target type
+//!   at src/main.rs:11:26
+//! - Input '❓' is invalid: invalid digit found in string
+//!   at src/main.rs:16:10
+//!   at src/main.rs:20:30
 //! ```
 //!
 //! # In a Nutshell
@@ -106,27 +125,6 @@
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn main()
-//! {
-//!     let err = run().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         Failed to run application
-//!         - Input is not ASCII: '🙈'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Input is not ASCII: '🙉'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Input is not ASCII: '🙊'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
-//! }
-//!
 //! fn run() -> Result<(), Error>
 //! {
 //!     let mut stash = ErrorStash::new(|| "Failed to run application");
@@ -154,6 +152,27 @@
 //! fn cleanup() -> Result<(), Error>
 //! {
 //!     Err(err!("Cleanup failed"))
+//! }
+//!
+//! fn main()
+//! {
+//!     let err = run().unwrap_err();
+//!     let printed = format!("{err:#}");
+//!     let printed = replace_line_numbers(&printed);
+//!     assert_eq!(printed, indoc::indoc! {"
+//!         Failed to run application
+//!         - Input is not ASCII: '🙈'
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         - Input is not ASCII: '🙉'
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         - Input is not ASCII: '🙊'
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         - Cleanup failed
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -189,28 +208,13 @@
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn main()
-//! {
-//!     let err = run().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         Failed to run application
-//!         - Input is not ASCII: '❌'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
-//! }
-//!
 //! fn run() -> Result<(), Error>
 //! {
 //!     match write("❌").or_create_stash(|| "Failed to run application") {
 //!         Ok(()) => Ok(()),
 //!         Err(mut stash) => {
 //!             cleanup().or_stash(&mut stash);
-//!             return Err(stash.into());
+//!             Err(stash.into())
 //!         },
 //!     }
 //! }
@@ -226,6 +230,21 @@
 //! fn cleanup() -> Result<(), Error>
 //! {
 //!     Err(err!("Cleanup failed"))
+//! }
+//!
+//! fn main()
+//! {
+//!     let err = run().unwrap_err();
+//!     let printed = format!("{err:#}");
+//!     let printed = replace_line_numbers(&printed);
+//!     assert_eq!(printed, indoc::indoc! {"
+//!         Failed to run application
+//!         - Input is not ASCII: '❌'
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         - Cleanup failed
+//!           at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -249,21 +268,6 @@
 # use color_eyre::eyre;
 use lazy_errors::prelude::*;
 use eyre::bail;
-
-fn main()
-{
-    let err = run().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Failed to run
-        - Input is not ASCII: '❌'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
-}
 
 fn run() -> Result<(), eyre::Report>
 {
@@ -289,6 +293,21 @@ fn cleanup() -> Result<(), Error>
 {
     Err(err!("Cleanup failed"))
 }
+
+fn main()
+{
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run
+        - Input is not ASCII: '❌'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Cleanup failed
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
 ```
 "##
 )]
@@ -299,23 +318,6 @@ fn cleanup() -> Result<(), Error>
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
-//!
-//! fn main()
-//! {
-//!     let err = first().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         In first(): second() failed
-//!         - In second(): third() failed
-//!           - In third(): There were errors
-//!             - First error
-//!               at lazy_errors/src/lib.rs:1234:56
-//!             - Second error
-//!               at lazy_errors/src/lib.rs:1234:56
-//!             at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
-//! }
 //!
 //! fn first() -> Result<(), Error>
 //! {
@@ -340,6 +342,23 @@ fn cleanup() -> Result<(), Error>
 //!
 //!     stash.into()
 //! }
+//!
+//! fn main()
+//! {
+//!     let err = first().unwrap_err();
+//!     let printed = format!("{err:#}");
+//!     let printed = replace_line_numbers(&printed);
+//!     assert_eq!(printed, indoc::indoc! {"
+//!         In first(): second() failed
+//!         - In second(): third() failed
+//!           - In third(): There were errors
+//!             - First error
+//!               at lazy_errors/src/lib.rs:1234:56
+//!             - Second error
+//!               at lazy_errors/src/lib.rs:1234:56
+//!             at lazy_errors/src/lib.rs:1234:56
+//!           at lazy_errors/src/lib.rs:1234:56"});
+//! }
 //! ```
 //!
 //! The example above may seem unwieldy. In fact, that example only serves
@@ -357,21 +376,6 @@ fn cleanup() -> Result<(), Error>
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::{prelude::*, Result};
-//!
-//! fn main()
-//! {
-//!     let err = first().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         Something went wrong: In third(): There were errors
-//!         - First error
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Second error
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         at lazy_errors/src/lib.rs:1234:56
-//!         at lazy_errors/src/lib.rs:1234:56"});
-//! }
 //!
 //! fn first() -> Result<(), Error>
 //! {
@@ -391,6 +395,21 @@ fn cleanup() -> Result<(), Error>
 //!     stash.push("Second error");
 //!
 //!     stash.into()
+//! }
+//!
+//! fn main()
+//! {
+//!     let err = first().unwrap_err();
+//!     let printed = format!("{err:#}");
+//!     let printed = replace_line_numbers(&printed);
+//!     assert_eq!(printed, indoc::indoc! {"
+//!         Something went wrong: In third(): There were errors
+//!         - First error
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         - Second error
+//!           at lazy_errors/src/lib.rs:1234:56
+//!         at lazy_errors/src/lib.rs:1234:56
+//!         at lazy_errors/src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -439,16 +458,6 @@ fn cleanup() -> Result<(), Error>
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn main()
-//! {
-//!     let err = parent().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         In parent(): child() failed: Arbitrary String
-//!         at lazy_errors/src/lib.rs:1234:56"});
-//! }
-//!
 //! fn parent() -> Result<(), Error>
 //! {
 //!     child().or_wrap_with(|| "In parent(): child() failed")
@@ -457,6 +466,16 @@ fn cleanup() -> Result<(), Error>
 //! fn child() -> Result<(), String>
 //! {
 //!     Err(String::from("Arbitrary String"))
+//! }
+//!
+//! fn main()
+//! {
+//!     let err = parent().unwrap_err();
+//!     let printed = format!("{err:#}");
+//!     let printed = replace_line_numbers(&printed);
+//!     assert_eq!(printed, indoc::indoc! {"
+//!         In parent(): child() failed: Arbitrary String
+//!         at lazy_errors/src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
