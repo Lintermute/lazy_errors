@@ -28,6 +28,7 @@ where
     /// When you're done, you can return the entire error list in one go.
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
     /// fn main()
@@ -36,7 +37,7 @@ where
     ///
     ///     let err = write_or_cleanup("❌").unwrap_err();
     ///     let printed = format!("{err:#}");
-    ///     let printed = lazy_errors::replace_line_numbers(&printed);
+    ///     let printed = replace_line_numbers(&printed);
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         Failed to write
     ///         - Input is not ASCII: '❌'

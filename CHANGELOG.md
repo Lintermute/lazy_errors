@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- Hide the doctest line number helper better
+
 ### Added
 
 - Add `ErrorStash::ok`

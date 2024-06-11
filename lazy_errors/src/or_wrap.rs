@@ -16,6 +16,7 @@ pub trait OrWrap<T, E>
     /// that will hold the original `e1` value.
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
     /// fn main()
@@ -24,7 +25,7 @@ pub trait OrWrap<T, E>
     ///
     ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
     ///     let printed = format!("{err:#}");
-    ///     let printed = lazy_errors::replace_line_numbers(&printed);
+    ///     let printed = replace_line_numbers(&printed);
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         ❌
     ///         at lazy_errors/src/or_wrap.rs:1234:56"});

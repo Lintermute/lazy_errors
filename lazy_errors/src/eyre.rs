@@ -81,6 +81,7 @@ pub trait IntoEyreReport
     /// i.e. `Result<_, E>` where `E` is [`eyre::Report`].
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// # use color_eyre::eyre;
     /// use eyre::{bail, eyre, Result};
     /// use lazy_errors::prelude::*;
@@ -93,7 +94,7 @@ pub trait IntoEyreReport
     ///
     /// let err: eyre::Report = adhoc_error().unwrap_err();
     /// let printed = format!("{err}"); // No pretty-printing required
-    /// let printed = lazy_errors::replace_line_numbers(&printed);
+    /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     first() failed
     ///     at lazy_errors/src/eyre.rs:1234:56"});
@@ -107,7 +108,7 @@ pub trait IntoEyreReport
     ///
     /// let err: eyre::Report = wrapped_report().unwrap_err();
     /// let printed = format!("{err}"); // No pretty-printing required
-    /// let printed = lazy_errors::replace_line_numbers(&printed);
+    /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     This is an eyre::Report
     ///     at lazy_errors/src/eyre.rs:1234:56"});
@@ -124,7 +125,7 @@ pub trait IntoEyreReport
     ///
     /// let err: eyre::Report = stashed_errors().unwrap_err();
     /// let printed = format!("{err}"); // No pretty-printing required
-    /// let printed = lazy_errors::replace_line_numbers(&printed);
+    /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     One or more things failed
     ///     - first() failed

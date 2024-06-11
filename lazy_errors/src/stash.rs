@@ -40,6 +40,7 @@ which performs a (lossy) conversion to
 "##
 )]
 /// ```
+/// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// use lazy_errors::prelude::*;
 ///
 /// let errs = ErrorStash::new(|| "Something went wrong");
@@ -60,7 +61,7 @@ which performs a (lossy) conversion to
 /// assert_eq!(&format!("{err}"), "Something went wrong (2 errors)");
 ///
 /// let printed = format!("{err:#}");
-/// let printed = lazy_errors::replace_line_numbers(&printed);
+/// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Something went wrong
 ///     - This is an error message
