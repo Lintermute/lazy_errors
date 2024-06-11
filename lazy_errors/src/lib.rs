@@ -229,7 +229,7 @@
 //!         Ok(()) => Ok(()),
 //!         Err(mut stash) => {
 //!             cleanup().or_stash(&mut stash);
-//!             return Err(stash.into());
+//!             Err(stash.into())
 //!         },
 //!     }
 //! }
