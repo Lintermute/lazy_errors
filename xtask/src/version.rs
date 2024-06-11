@@ -103,8 +103,6 @@ impl FromStr for CustomVersion {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let s = s.trim();
-
         if s.is_empty() {
             return Err(err!("Version number is empty"));
         }
@@ -148,17 +146,7 @@ fn run_import(args: &ImportArgs) -> Result<()> {
     let version = crate::exec_and_capture(&["git", "describe", "--dirty"])?;
     let version = version_from_git_describe(&version)?;
 
-    let is_accepted = args.accept.is_empty()
-        || args
-            .accept
-            .iter()
-            .any(|accept| match accept {
-                Pattern::MajorMinorPatch => {
-                    matches!(version, VersionNumber::MajorMinorPatch(_))
-                }
-            });
-
-    if !is_accepted {
+    if !is_accepted(&version, &args.accept) {
         return Err(err!(
             "Version '{version}' does not match any `accept` parameter"
         ));
@@ -168,6 +156,8 @@ fn run_import(args: &ImportArgs) -> Result<()> {
 }
 
 fn version_from_git_describe(output: &str) -> Result<VersionNumber> {
+    let output = output.trim();
+
     if output.is_empty() {
         return Err(err!("Version number is empty"));
     }
@@ -178,4 +168,84 @@ fn version_from_git_describe(output: &str) -> Result<VersionNumber> {
     };
 
     output.parse()
+}
+
+fn is_accepted(version: &VersionNumber, accept: &[Pattern]) -> bool {
+    accept.is_empty()
+        || accept
+            .iter()
+            .any(|accept| match accept {
+                Pattern::MajorMinorPatch => {
+                    matches!(version, VersionNumber::MajorMinorPatch(_))
+                }
+            })
+}
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+
+    use super::*;
+
+    fn v(major: u16, minor: u16, patch: u16) -> VersionNumber {
+        VersionNumber::MajorMinorPatch(MajorMinorPatch {
+            major,
+            minor,
+            patch,
+        })
+    }
+
+    fn custom(s: &str) -> VersionNumber {
+        VersionNumber::CustomVersion(CustomVersion(s.to_owned()))
+    }
+
+    #[test_case("0.0.0", v(0, 0, 0))]
+    #[test_case("0.0.7", v(0, 0, 7))]
+    #[test_case("0.7.0", v(0, 7, 0))]
+    #[test_case("7.0.0", v(7, 0, 0))]
+    #[test_case("1.2.3", v(1, 2, 3))]
+    #[test_case("v0.0.0", v(0, 0, 0))]
+    #[test_case("v0.0.7", v(0, 0, 7))]
+    #[test_case("v0.7.0", v(0, 7, 0))]
+    #[test_case("v7.0.0", v(7, 0, 0))]
+    #[test_case("v1.2.3", v(1, 2, 3))]
+    #[test_case("0.5.0-2-ga712af5", custom("0.5.0-2-ga712af5"))]
+    #[test_case("v0.5.0-2-ga712af5", custom("0.5.0-2-ga712af5"))]
+    #[test_case(" \n  v0.5.0-2-ga712af5 \n  ", custom("0.5.0-2-ga712af5"))]
+    #[test_case("abcdef", custom("abcdef"))]
+    #[test_case("foobar", custom("foobar"))]
+    #[test_case("-1.-2.-3", custom("-1.-2.-3"))]
+    fn version_from_git_describe(input: &str, expectation: VersionNumber) {
+        let actual = super::version_from_git_describe(input).unwrap();
+        assert_eq!(actual, expectation);
+    }
+
+    #[test_case(v(0, 0, 0), "0.0.0")]
+    #[test_case(v(0, 0, 7), "0.0.7")]
+    #[test_case(v(0, 7, 0), "0.7.0")]
+    #[test_case(v(7, 0, 0), "7.0.0")]
+    #[test_case(v(1, 2, 3), "1.2.3")]
+    #[test_case(custom("0.5.0-2-ga712af5"), "0.5.0-2-ga712af5")]
+    #[test_case(custom("v0.5.0-2-ga712af5"), "v0.5.0-2-ga712af5")]
+    fn display_version_number(input: VersionNumber, expectation: &str) {
+        assert_eq!(&input.to_string(), expectation);
+    }
+
+    #[test_case(""; "empty")]
+    #[test_case(" "; "only whitespace")]
+    fn version_from_git_describe_err(input: &str) {
+        assert!(super::version_from_git_describe(input).is_err());
+    }
+
+    #[test_case(v(0, 0, 0), &[], true)]
+    #[test_case(v(0, 0, 7), &[], true)]
+    #[test_case(v(0, 7, 0), &[], true)]
+    #[test_case(v(7, 0, 0), &[], true)]
+    #[test_case(v(1, 2, 3), &[], true)]
+    #[test_case(v(0, 5, 0), &[], true)]
+    #[test_case(custom("0.5.0-2-ga712af5"), &[], true)]
+    fn is_accepted(v: VersionNumber, accept: &[Pattern], expectation: bool) {
+        let actual = super::is_accepted(&v, accept);
+        assert_eq!(actual, expectation);
+    }
 }
