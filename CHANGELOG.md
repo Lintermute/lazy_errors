@@ -14,6 +14,8 @@ This file documents all changes affecting the [semver] version of this project.
 - Add Apache 2.0 license (project is now dual-licensed: MIT or Apache 2.0)
 - Add contribution info to `README.md`
 - Add rustdoc links and badges to `README.md`
+- Add better rustdoc examples
+- Add new generated README for v0.5.0 with new examples and links
 
 ## [`v0.4.0`] (2024-06-08)
 
