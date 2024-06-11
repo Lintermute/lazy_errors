@@ -633,6 +633,131 @@ mod tests {
     use super::*;
 
     #[test_case(
+        &["xtask", "ci", "rustfmt"],
+        &[&["cargo", "+nightly", "--locked", "fmt", "--check", "--all"]];
+        "`rustfmt` task")]
+    #[test_case(
+        &["xtask", "ci", "clippy", "--profile=dev"],
+        &[
+            &["cargo", "hack", "clippy",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets", "--", "-Dwarnings"],
+        ]; "`clippy` task")]
+    #[test_case(
+        &["xtask", "ci", "test", "--profile=dev"],
+        &[
+            &["cargo", "hack", "test",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps"],
+        ]; "`test` task")]
+    #[test_case(
+        &["xtask", "ci", "build", "--profile=dev"],
+        &[
+            &["cargo", "hack", "build",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets", "--exclude=xtask"],
+        ]; "`build` task")]
+    #[test_case(
+        &["xtask", "ci", "tarpaulin", "--profile=dev"],
+        &[
+            &["cargo", "tarpaulin",
+                "--locked", "--workspace",
+                "--all-features", "--all-targets", "--doc", "--no-fail-fast",
+                "--output-dir", "tarpaulin-report-dev"],
+        ]; "`tarpaulin` task")]
+    #[test_case(
+        &["xtask", "ci", "miri"],
+        &[
+            &["cargo", "+nightly", "--locked", "clean"],
+            &["cargo", "+nightly", "hack", "miri", "test",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps"],
+            &["cargo", "+nightly", "--locked", "clean"],
+        ]; "`miri` task")]
+    #[test_case(
+        &["xtask", "ci", "docs", "--profile=dev"],
+        &[
+            &["cargo", "hack", "doc",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--no-deps"],
+        ]; "`docs` task")]
+    #[test_case(
+        &["xtask", "ci", "deps"],
+        &[
+            &["cargo", "upgrades"],
+            &["cargo", "--locked", "update" ],
+            &["cargo", "--locked", "audit", "--deny", "warnings"],
+        ]; "`deps` task")]
+    #[test_case(
+        &["xtask", "ci", "quick"],
+        &[
+            &["cargo", "+nightly", "--locked", "fmt", "--check", "--all"],
+            &["cargo", "hack", "clippy",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets", "--", "-Dwarnings"],
+            &["cargo", "hack", "test",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps"],
+            &["cargo", "hack", "doc",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--no-deps"],
+        ]; "default `quick` tasklist")]
+    #[test_case(
+        &["xtask", "ci", "quick",
+            "--include-ignored-tests",
+            "--include-ignored-tests-in-coverage",
+            "--skip-rustfmt",
+            "--skip-build=false",
+            "--skip-tarpaulin=false",
+            "--skip-dependency-checks=false",
+        ],
+        &[
+            &["cargo", "hack", "clippy",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets", "--", "-Dwarnings"],
+            &["cargo", "hack", "test",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--", "--include-ignored"],
+            &["cargo", "hack", "doc",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--no-deps"],
+            &["cargo", "hack", "build",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets", "--exclude=xtask"],
+            &["cargo", "tarpaulin",
+                "--locked", "--workspace",
+                "--all-features", "--all-targets", "--doc", "--no-fail-fast",
+                "--output-dir", "tarpaulin-report-dev",
+                "--", "--include-ignored"],
+            &["cargo", "upgrades"],
+            &["cargo", "--locked", "update" ],
+            &["cargo", "--locked", "audit", "--deny", "warnings"],
+        ]; "`quick` tasklist with inverted flags (w/o --skip-moving-targets)")]
+    #[test_case(
+        &["xtask", "ci", "quick", "--skip-moving-targets"],
+        &[
+            &["cargo", "hack", "check",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--all-targets"],
+            &["cargo", "hack", "test",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps"],
+            &["cargo", "hack", "doc",
+                "--locked", "--workspace",
+                "--feature-powerset", "--optional-deps",
+                "--no-deps"],
+        ]; "`quick` tasklist with --skip-moving-targets")]
+    #[test_case(
         &["xtask", "ci", "all",
             "--profile=dev",
             "--skip-rustfmt",
