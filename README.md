@@ -669,7 +669,7 @@ dual licensed as above, without any additional terms or conditions.
 
  [__cargo_doc2readme_dependencies_info]: ggGkYW0BYXSEG9ybpOeDAqGAG9HvJZNoD8WVG9j2ywGL9HOVG66pmD4ift53YXKEG-e5lgyVR5_vG6hznPoOh-MtGyVdbgfXXIQiG2_ygREvxCfiYWSCgmpSZXBvcnRhYmxl9oJrbGF6eV9lcnJvcnNlMC41LjA
  [__link0]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
- [__link1]: https://crates.io/crates/Reportable
+ [__link1]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/trait.Reportable.html
  [__link10]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrStash::or_stash
  [__link11]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
  [__link12]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
@@ -707,15 +707,15 @@ dual licensed as above, without any additional terms or conditions.
  [__link41]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrapWith::or_wrap_with
  [__link42]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrap::or_wrap
  [__link43]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link44]: Error#inner-error-type-i
- [__link45]: `err!`
+ [__link44]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link45]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/macro.err.html
  [__link46]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
  [__link47]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
  [__link48]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Result
  [__link49]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
  [__link5]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
  [__link50]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
- [__link51]: `&str`
+ [__link51]: https://doc.rust-lang.org/stable/std/primitive.str.html
  [__link52]: https://doc.rust-lang.org/stable/alloc/?search=string::String
  [__link53]: https://doc.rust-lang.org/stable/std/?search=error::Error
  [__link54]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
@@ -725,7 +725,7 @@ dual licensed as above, without any additional terms or conditions.
  [__link58]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
  [__link59]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
  [__link6]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
- [__link60]: Error#inner-error-type-i
+ [__link60]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/struct.Error.html#inner-error-type-i
  [__link61]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
  [__link62]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
  [__link63]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
