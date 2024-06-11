@@ -103,13 +103,14 @@
 //! Here's an example:
 //!
 //! ```
+//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
 //! fn main()
 //! {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
-//!     let printed = lazy_errors::replace_line_numbers(&printed);
+//!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '🙈'
@@ -185,13 +186,14 @@
 //! directly.
 //!
 //! ```
+//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
 //! fn main()
 //! {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
-//!     let printed = lazy_errors::replace_line_numbers(&printed);
+//!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '❌'
@@ -243,6 +245,7 @@
 [`into_eyre_report`](IntoEyreReport::into_eyre_report):
 
 ```
+# use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 # use color_eyre::eyre;
 use lazy_errors::prelude::*;
 use eyre::bail;
@@ -251,7 +254,7 @@ fn main()
 {
     let err = run().unwrap_err();
     let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
+    let printed = replace_line_numbers(&printed);
     assert_eq!(printed, indoc::indoc! {"
         Failed to run
         - Input is not ASCII: '❌'
@@ -294,13 +297,14 @@ fn cleanup() -> Result<(), Error>
 //! As you might have noticed, [`Error`]s form hierarchies:
 //!
 //! ```
+//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
 //! fn main()
 //! {
 //!     let err = first().unwrap_err();
 //!     let printed = format!("{err:#}");
-//!     let printed = lazy_errors::replace_line_numbers(&printed);
+//!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         In first(): second() failed
 //!         - In second(): third() failed
@@ -351,13 +355,14 @@ fn cleanup() -> Result<(), Error>
 //! or to attach some context to an error:
 //!
 //! ```
+//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::{prelude::*, Result};
 //!
 //! fn main()
 //! {
 //!     let err = first().unwrap_err();
 //!     let printed = format!("{err:#}");
-//!     let printed = lazy_errors::replace_line_numbers(&printed);
+//!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Something went wrong: In third(): There were errors
 //!         - First error
@@ -431,13 +436,14 @@ fn cleanup() -> Result<(), Error>
 //! by calling [`or_wrap`] or [`or_wrap_with`]:
 //!
 //! ```
+//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
 //! fn main()
 //! {
 //!     let err = parent().unwrap_err();
 //!     let printed = format!("{err:#}");
-//!     let printed = lazy_errors::replace_line_numbers(&printed);
+//!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         In parent(): child() failed: Arbitrary String
 //!         at lazy_errors/src/lib.rs:1234:56"});
@@ -695,7 +701,7 @@ use alloc::string::String;
 /// We just need this to be able to use [`assert_eq`] in doctests.
 /// Do not use this method.
 #[doc(hidden)]
-pub fn replace_line_numbers(text: &str) -> String
+pub fn doctest_line_num_helper(text: &str) -> String
 {
     use alloc::{format, string::ToString};
 

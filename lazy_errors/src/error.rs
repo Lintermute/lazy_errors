@@ -178,6 +178,7 @@ pub struct StashedErrors<I>
 /// Values of this type get created by [`or_wrap`] and [`or_wrap_with`]:
 ///
 /// ```
+/// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// # use core::str::FromStr;
 /// use lazy_errors::prelude::*;
 ///
@@ -187,13 +188,14 @@ pub struct StashedErrors<I>
 /// assert_eq!(printed, "cannot parse integer from empty string");
 ///
 /// let printed = format!("{err:#}");
-/// let printed = lazy_errors::replace_line_numbers(&printed);
+/// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     cannot parse integer from empty string
 ///     at lazy_errors/src/error.rs:1234:56"});
 /// ```
 ///
 /// ```
+/// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// # use core::str::FromStr;
 /// use lazy_errors::prelude::*;
 ///
@@ -208,7 +210,7 @@ pub struct StashedErrors<I>
 /// );
 ///
 /// let printed = format!("{err:#}");
-/// let printed = lazy_errors::replace_line_numbers(&printed);
+/// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Not an u32: cannot parse integer from empty string
 ///     at lazy_errors/src/error.rs:1234:56"});
@@ -250,6 +252,7 @@ pub struct WrappedError<I>
 /// Printing and “pretty-printing” is supported as well:
 ///
 /// ```
+/// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// use lazy_errors::AdHocError;
 ///
 /// let err = AdHocError::from_message("Something went wrong");
@@ -258,7 +261,7 @@ pub struct WrappedError<I>
 /// assert_eq!(printed, "Something went wrong");
 ///
 /// let printed = format!("{err:#}");
-/// let printed = lazy_errors::replace_line_numbers(&printed);
+/// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Something went wrong
 ///     at lazy_errors/src/error.rs:1234:56"});
@@ -363,6 +366,7 @@ impl<I: Display> Display for StashedErrors<I>
     /// Doing so will also add source location information:
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
     /// let mut errs = ErrorStash::new(|| "Summary");
@@ -375,7 +379,7 @@ impl<I: Display> Display for StashedErrors<I>
     /// assert_eq!(format!("{err}"), "Summary (2 errors)");
     ///
     /// let printed = format!("{err:#}");
-    /// let printed = lazy_errors::replace_line_numbers(&printed);
+    /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     Summary
     ///     - Foo
@@ -389,6 +393,7 @@ impl<I: Display> Display for StashedErrors<I>
     /// when printing the “short” form (without the “pretty-print” flag).
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
     /// fn run() -> Result<(), Error>
@@ -415,7 +420,7 @@ impl<I: Display> Display for StashedErrors<I>
     /// assert_eq!(format!("{err}"), "Parent failed: Child failed: Root cause");
     ///
     /// let printed = format!("{err:#}");
-    /// let printed = lazy_errors::replace_line_numbers(&printed);
+    /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     Parent failed
     ///     - Child failed

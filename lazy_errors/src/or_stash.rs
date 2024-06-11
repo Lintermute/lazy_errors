@@ -29,13 +29,14 @@ pub trait OrStash<S, I, T>
     /// `Result<(), Error>` or `eyre::Result<()>`.
     ///
     /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
     /// fn main()
     /// {
     ///     let err = run().unwrap_err();
     ///     let printed = format!("{err:#}");
-    ///     let printed = lazy_errors::replace_line_numbers(&printed);
+    ///     let printed = replace_line_numbers(&printed);
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         Failed to run application
     ///         - Input is not ASCII: '🙈'
