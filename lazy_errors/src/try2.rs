@@ -1,6 +1,6 @@
 /// Works like the `?` operator on [`StashedResult`] should.
 ///
-/// Example:
+/// The [`try2!`] macro works well with [`or_stash`] and [`ErrorStash::ok`]:
 ///
 /// ```
 /// use lazy_errors::{prelude::*, try2, Result};
@@ -15,7 +15,7 @@
 ///         .split('.')
 ///         .collect::<Vec<_>>()
 ///         .try_into()
-///         .map_err(|_| { Error::from_message("Must have two parts") })
+///         .map_err(|_| Error::from_message("Must have two parts"))
 ///         .or_stash(&mut errs));
 ///
 ///     // If we got exactly two parts, try to parse both of them,
@@ -30,7 +30,7 @@
 ///         .ok();
 ///
 ///     // Return _all_ errors if major, minor, or both were invalid.
-///     errs.into_result()?;
+///     try2!(errs.ok());
 ///
 ///     // If the result above was `Ok`, all `ok()` calls returned `Some`.
 ///     Ok((major.unwrap(), minor.unwrap()))
@@ -45,16 +45,20 @@
 /// assert_eq!(err.to_string(), "Invalid version (2 errors)");
 /// ```
 ///
-/// When the `Try` trait is stabilized, this method will be replaced
+/// When the `Try` trait is stabilized, this method will probably be replaced
 /// by the `?` operator.
 ///
 /// Before Rust had the `?` operator, that behavior was implemented in
 /// the [`try!`] macro. Currently, the `?` operator is being made more
 /// generic: When the `Try` trait gets stabilized, we can implement
 /// that trait on any of our types and the `?` operator “should just work”.
-/// Meanwhile, this macro takes the place of the `?` ([`StashedResult`] only).
+/// Meanwhile, this macro takes the place of the `?` operator
+/// (for [`StashedResult`] only).
 ///
+/// [`ErrorStash::ok`]: crate::ErrorStash::ok
 /// [`StashedResult`]: crate::StashedResult
+/// [`or_stash`]: crate::OrStash::or_stash
+/// [`try2!`]: crate::try2!
 #[macro_export]
 macro_rules! try2 {
     ($expr:expr $(,)?) => {
