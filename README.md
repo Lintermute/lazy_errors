@@ -4,23 +4,57 @@ Effortlessly create, group, and nest arbitrary errors,
 and defer error handling ergonomically.
 
 ```rust
-use lazy_errors::{prelude::*, Result};
+use core::str::FromStr;
 
-fn run() -> Result<()>
+use lazy_errors::{prelude::*, try2, Result};
+
+fn run(input1: &str, input2: &str) -> Result<()>
 {
-    let mut errs = ErrorStash::new(|| "Failed to run application");
+    let mut errs = ErrorStash::new(|| "There were one or more errors");
 
-    write_if_ascii("42").or_stash(&mut errs); // `errs` contains 0 errors
-    write_if_ascii("❌").or_stash(&mut errs); // `errs` contains 1 error
+    u8::from_str("42").or_stash(&mut errs); // `errs` contains 0 errors
+    u8::from_str("❌").or_stash(&mut errs); // `errs` contains 1 error
+    u8::from_str("1337").or_stash(&mut errs); // `errs` contains 2 errors
 
-    cleanup().or_stash(&mut errs); // Run cleanup even if there were errors,
-                                   // but cleanup is allowed to fail as well
+    // `input1` is very important in this example,
+    // so make sure it has a nice message.
+    let r: Result<u8> = u8::from_str(input1)
+        .or_wrap_with(|| format!("Input '{input1}' is invalid"));
 
-    errs.into() // `Ok(())` if `errs` was still empty, `Err` otherwise
+    // If `input1` is invalid, we don't want to continue
+    // but return _all_ errors that have occurred so far.
+    let input1: u8 = try2!(r.or_stash(&mut errs));
+    println!("input1 = {input1:#X}");
+
+    // Continue handling other `Result`s.
+    u8::from_str(input2).or_stash(&mut errs);
+
+    errs.into() // `Ok(())` if `errs` is still empty, `Err` otherwise
 }
 
-let errs = run().unwrap_err();
-assert_eq!(errs.childs().len(), 2);
+fn main()
+{
+    let err = run("❓", "❗").unwrap_err();
+    let n = err.childs().len();
+    eprintln!("Got {n} error(s).");
+    eprintln!("---------------------------------------------------------");
+    eprintln!("{err:#}");
+}
+```
+
+Running the example will print:
+
+```text
+Got 3 error(s).
+---------------------------------------------------------
+There were one or more errors
+- invalid digit found in string
+  at src/main.rs:10:24
+- number too large to fit in target type
+  at src/main.rs:11:26
+- Input '❓' is invalid: invalid digit found in string
+  at src/main.rs:16:10
+  at src/main.rs:20:30
 ```
 
 ## In a Nutshell
@@ -90,27 +124,6 @@ Here’s an example:
 ```rust
 use lazy_errors::prelude::*;
 
-fn main()
-{
-    let err = run().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Failed to run application
-        - Input is not ASCII: '🙈'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Input is not ASCII: '🙉'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Input is not ASCII: '🙊'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
-}
-
 fn run() -> Result<(), Error>
 {
     let mut stash = ErrorStash::new(|| "Failed to run application");
@@ -138,6 +151,27 @@ fn print_if_ascii(text: &str) -> Result<(), Error>
 fn cleanup() -> Result<(), Error>
 {
     Err(err!("Cleanup failed"))
+}
+
+fn main()
+{
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run application
+        - Input is not ASCII: '🙈'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Input is not ASCII: '🙉'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Input is not ASCII: '🙊'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Cleanup failed
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
 }
 ```
 
@@ -172,28 +206,13 @@ directly.
 ```rust
 use lazy_errors::prelude::*;
 
-fn main()
-{
-    let err = run().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Failed to run application
-        - Input is not ASCII: '❌'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
-}
-
 fn run() -> Result<(), Error>
 {
     match write("❌").or_create_stash(|| "Failed to run application") {
         Ok(()) => Ok(()),
         Err(mut stash) => {
             cleanup().or_stash(&mut stash);
-            return Err(stash.into());
+            Err(stash.into())
         },
     }
 }
@@ -210,6 +229,21 @@ fn cleanup() -> Result<(), Error>
 {
     Err(err!("Cleanup failed"))
 }
+
+fn main()
+{
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run application
+        - Input is not ASCII: '❌'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Cleanup failed
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
 ```
 
 #### Example: `into_eyre_*`
@@ -224,21 +258,6 @@ conversion from [`ErrorStash`][__link35] and [`StashWithErrors`][__link36] exist
 ```rust
 use lazy_errors::prelude::*;
 use eyre::bail;
-
-fn main()
-{
-    let err = run().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Failed to run
-        - Input is not ASCII: '❌'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
-        - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
-}
 
 fn run() -> Result<(), eyre::Report>
 {
@@ -264,6 +283,21 @@ fn cleanup() -> Result<(), Error>
 {
     Err(err!("Cleanup failed"))
 }
+
+fn main()
+{
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run
+        - Input is not ASCII: '❌'
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56
+        - Cleanup failed
+          at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
 ```
 
 #### Example: Hierarchies
@@ -272,23 +306,6 @@ As you might have noticed, [`Error`][__link39]s form hierarchies:
 
 ```rust
 use lazy_errors::prelude::*;
-
-fn main()
-{
-    let err = first().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        In first(): second() failed
-        - In second(): third() failed
-          - In third(): There were errors
-            - First error
-              at lazy_errors/src/lib.rs:1234:56
-            - Second error
-              at lazy_errors/src/lib.rs:1234:56
-            at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
-}
 
 fn first() -> Result<(), Error>
 {
@@ -313,6 +330,23 @@ fn third() -> Result<(), Error>
 
     stash.into()
 }
+
+fn main()
+{
+    let err = first().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        In first(): second() failed
+        - In second(): third() failed
+          - In third(): There were errors
+            - First error
+              at lazy_errors/src/lib.rs:1234:56
+            - Second error
+              at lazy_errors/src/lib.rs:1234:56
+            at lazy_errors/src/lib.rs:1234:56
+          at lazy_errors/src/lib.rs:1234:56"});
+}
 ```
 
 The example above may seem unwieldy. In fact, that example only serves
@@ -329,21 +363,6 @@ or to attach some context to an error:
 
 ```rust
 use lazy_errors::{prelude::*, Result};
-
-fn main()
-{
-    let err = first().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Something went wrong: In third(): There were errors
-        - First error
-          at lazy_errors/src/lib.rs:1234:56
-        - Second error
-          at lazy_errors/src/lib.rs:1234:56
-        at lazy_errors/src/lib.rs:1234:56
-        at lazy_errors/src/lib.rs:1234:56"});
-}
 
 fn first() -> Result<(), Error>
 {
@@ -363,6 +382,21 @@ fn third() -> Result<()>
     stash.push("Second error");
 
     stash.into()
+}
+
+fn main()
+{
+    let err = first().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Something went wrong: In third(): There were errors
+        - First error
+          at lazy_errors/src/lib.rs:1234:56
+        - Second error
+          at lazy_errors/src/lib.rs:1234:56
+        at lazy_errors/src/lib.rs:1234:56
+        at lazy_errors/src/lib.rs:1234:56"});
 }
 ```
 
@@ -410,16 +444,6 @@ by calling [`or_wrap`][__link56] or [`or_wrap_with`][__link57]:
 ```rust
 use lazy_errors::prelude::*;
 
-fn main()
-{
-    let err = parent().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = lazy_errors::replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        In parent(): child() failed: Arbitrary String
-        at lazy_errors/src/lib.rs:1234:56"});
-}
-
 fn parent() -> Result<(), Error>
 {
     child().or_wrap_with(|| "In parent(): child() failed")
@@ -428,6 +452,16 @@ fn parent() -> Result<(), Error>
 fn child() -> Result<(), String>
 {
     Err(String::from("Arbitrary String"))
+}
+
+fn main()
+{
+    let err = parent().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        In parent(): child() failed: Arbitrary String
+        at lazy_errors/src/lib.rs:1234:56"});
 }
 ```
 
@@ -633,73 +667,73 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
 
- [__cargo_doc2readme_dependencies_info]: ggGkYW0BYXSEG9ybpOeDAqGAG9HvJZNoD8WVG9j2ywGL9HOVG66pmD4ift53YXKEG1UdOg9mvdfeG50zSyeHMjByG3rkMmEK2-80Gwrd-I5UmUIaYWSCgmpSZXBvcnRhYmxl9oJrbGF6eV9lcnJvcnNlMC40LjA
- [__link0]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
+ [__cargo_doc2readme_dependencies_info]: ggGkYW0BYXSEG9ybpOeDAqGAG9HvJZNoD8WVG9j2ywGL9HOVG66pmD4ift53YXKEG-e5lgyVR5_vG6hznPoOh-MtGyVdbgfXXIQiG2_ygREvxCfiYWSCgmpSZXBvcnRhYmxl9oJrbGF6eV9lcnJvcnNlMC41LjA
+ [__link0]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
  [__link1]: https://crates.io/crates/Reportable
- [__link10]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
- [__link11]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link12]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link13]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link14]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
- [__link15]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link16]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link17]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrCreateStash::or_create_stash
- [__link18]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrCreateStash::or_create_stash
- [__link19]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link2]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
- [__link20]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link21]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link22]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link23]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link24]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link25]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link26]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link27]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
- [__link28]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link29]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link3]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash::or_stash
- [__link30]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link31]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link32]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link33]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
- [__link34]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link35]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link36]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=StashWithErrors
- [__link37]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=IntoEyreResult::into_eyre_result
- [__link38]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=IntoEyreReport::into_eyre_report
- [__link39]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link4]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrStash
- [__link40]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrap::or_wrap
- [__link41]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link42]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrap::or_wrap
- [__link43]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link44]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/struct.Error.html#inner-error-type-i
- [__link45]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/macro.err.html
- [__link46]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link47]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
- [__link48]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Result
- [__link49]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link5]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
- [__link50]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link51]: https://doc.rust-lang.org/stable/alloc/?search=str
+ [__link10]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrStash::or_stash
+ [__link11]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link12]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link13]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link14]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/type.Result.html
+ [__link15]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link16]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link17]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrCreateStash::or_create_stash
+ [__link18]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrCreateStash::or_create_stash
+ [__link19]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link2]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrStash::or_stash
+ [__link20]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link21]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link22]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link23]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link24]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link25]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link26]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link27]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/type.Result.html
+ [__link28]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link29]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link3]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrStash::or_stash
+ [__link30]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link31]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link32]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link33]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/type.Result.html
+ [__link34]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link35]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link36]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=StashWithErrors
+ [__link37]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=IntoEyreResult::into_eyre_result
+ [__link38]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=IntoEyreReport::into_eyre_report
+ [__link39]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link4]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrStash
+ [__link40]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link41]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link42]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link43]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link44]: Error#inner-error-type-i
+ [__link45]: `err!`
+ [__link46]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link47]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
+ [__link48]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Result
+ [__link49]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
+ [__link5]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
+ [__link50]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
+ [__link51]: `&str`
  [__link52]: https://doc.rust-lang.org/stable/alloc/?search=string::String
  [__link53]: https://doc.rust-lang.org/stable/std/?search=error::Error
- [__link54]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link55]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link56]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrap::or_wrap
- [__link57]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link54]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link55]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link56]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link57]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=OrWrapWith::or_wrap_with
  [__link58]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
  [__link59]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
- [__link6]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link60]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/struct.Error.html#inner-error-type-i
- [__link61]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link62]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Error
- [__link63]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
- [__link64]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link65]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
+ [__link6]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link60]: Error#inner-error-type-i
+ [__link61]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link62]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Error
+ [__link63]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
+ [__link64]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
+ [__link65]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
  [__link66]: https://doc.rust-lang.org/stable/std/marker/trait.Sized.html
- [__link67]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/prelude/index.html
- [__link68]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/?search=Stashable
- [__link7]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link8]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/enum.ErrorStash.html
- [__link9]: https://docs.rs/lazy_errors/0.4.0/lazy_errors/type.Result.html
+ [__link67]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/prelude/index.html
+ [__link68]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=Stashable
+ [__link7]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link8]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/?search=ErrorStash
+ [__link9]: https://docs.rs/lazy_errors/0.5.0/lazy_errors/type.Result.html
