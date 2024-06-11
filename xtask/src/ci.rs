@@ -653,7 +653,7 @@ mod tests {
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
                 "--no-deps"],
-        ]; "minimal tasklist")]
+        ]; "minimal `all` tasklist")]
     #[test_case(
         &["xtask", "ci", "all"],
         &[
@@ -709,7 +709,7 @@ mod tests {
             &["cargo", "upgrades"],
             &["cargo", "--locked", "update" ],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
-        ]; "default tasklist")]
+        ]; "default `all` tasklist")]
     #[test_case(
         &["xtask", "ci", "all", "--skip-moving-targets"],
         &[
@@ -745,7 +745,7 @@ mod tests {
                 "--locked", "--workspace",
                 "--feature-powerset", "--optional-deps",
                 "--all-targets", "--exclude=xtask", "--release"],
-        ]; "stable tasklist")]
+        ]; "stable `all` tasklist")]
     fn transform_args_to_tasks(
         args: &[&str],
         tasklist: &[&[&str]],
