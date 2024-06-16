@@ -64,9 +64,9 @@ which performs a (lossy) conversion to
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Something went wrong
 ///     - This is an error message
-///       at lazy_errors/src/stash.rs:1234:56
+///       at src/stash.rs:1234:56
 ///     - Yet another error message
-///       at lazy_errors/src/stash.rs:1234:56"});
+///       at src/stash.rs:1234:56"});
 /// ```
 ///
 /// If you do not want to create an empty [`ErrorStash`] before adding errors,

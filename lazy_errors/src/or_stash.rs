@@ -38,17 +38,17 @@ pub trait OrStash<S, I, T> {
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         Failed to run application
     ///         - Input is not ASCII: '🙈'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
     ///         - Input is not ASCII: '🙉'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
     ///         - Input is not ASCII: '🙊'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56
     ///         - Cleanup failed
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56"});
+    ///           at src/or_stash.rs:1234:56
+    ///           at src/or_stash.rs:1234:56"});
     /// }
     ///
     /// fn run() -> Result<(), Error> {

@@ -189,7 +189,7 @@ pub struct StashedErrors<I> {
 /// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     cannot parse integer from empty string
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 /// ```
 ///
 /// ```
@@ -211,7 +211,7 @@ pub struct StashedErrors<I> {
 /// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Not an u32: cannot parse integer from empty string
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 /// ```
 ///
 /// You can then access the [`WrappedError`] in the [`Error`]
@@ -261,7 +261,7 @@ pub struct WrappedError<I> {
 /// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Something went wrong
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 /// ```
 #[derive(Debug)]
 pub struct AdHocError {
@@ -356,9 +356,9 @@ impl<I: Display> Display for StashedErrors<I> {
     /// assert_eq!(printed, indoc::indoc! {"
     ///     Summary
     ///     - Foo
-    ///       at lazy_errors/src/error.rs:1234:56
+    ///       at src/error.rs:1234:56
     ///     - Bar
-    ///       at lazy_errors/src/error.rs:1234:56"});
+    ///       at src/error.rs:1234:56"});
     /// ```
     ///
     /// When there is only a single error in a group, that error's output
@@ -395,8 +395,8 @@ impl<I: Display> Display for StashedErrors<I> {
     ///     Parent failed
     ///     - Child failed
     ///       - Root cause
-    ///         at lazy_errors/src/error.rs:1234:56
-    ///       at lazy_errors/src/error.rs:1234:56"});
+    ///         at src/error.rs:1234:56
+    ///       at src/error.rs:1234:56"});
     /// ```
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // TODO: Limit recursion depth for multiple sequences of

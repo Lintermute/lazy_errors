@@ -94,7 +94,7 @@ pub trait IntoEyreReport {
     /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     first() failed
-    ///     at lazy_errors/src/eyre.rs:1234:56"});
+    ///     at src/eyre.rs:1234:56"});
     ///
     /// fn wrapped_report() -> Result<()> {
     ///     let report = eyre!("This is an eyre::Report");
@@ -107,7 +107,7 @@ pub trait IntoEyreReport {
     /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     This is an eyre::Report
-    ///     at lazy_errors/src/eyre.rs:1234:56"});
+    ///     at src/eyre.rs:1234:56"});
     ///
     /// fn stashed_errors() -> Result<()> {
     ///     let mut stash = ErrorStash::new(|| "One or more things failed");
@@ -124,11 +124,11 @@ pub trait IntoEyreReport {
     /// assert_eq!(printed, indoc::indoc! {"
     ///     One or more things failed
     ///     - first() failed
-    ///       at lazy_errors/src/eyre.rs:1234:56
-    ///       at lazy_errors/src/eyre.rs:1234:56
+    ///       at src/eyre.rs:1234:56
+    ///       at src/eyre.rs:1234:56
     ///     - This is an eyre::Report
-    ///       at lazy_errors/src/eyre.rs:1234:56
-    ///       at lazy_errors/src/eyre.rs:1234:56"});
+    ///       at src/eyre.rs:1234:56
+    ///       at src/eyre.rs:1234:56"});
     /// ```
     ///
     /// In some cases, for example if you're using [`or_stash`],

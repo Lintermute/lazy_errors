@@ -35,7 +35,7 @@ where
     ///     let printed = replace_line_numbers(&printed);
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         Input is not ASCII: ❌
-    ///         at lazy_errors/src/or_wrap_with.rs:1234:56"});
+    ///         at src/or_wrap_with.rs:1234:56"});
     /// }
     ///
     /// fn run(tokens: &[&str]) -> Result<(), Error> {

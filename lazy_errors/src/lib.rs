@@ -156,17 +156,17 @@
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '🙈'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Input is not ASCII: '🙉'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Input is not ASCII: '🙊'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -230,11 +230,11 @@
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '❌'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -292,11 +292,11 @@ fn main()
     assert_eq!(printed, indoc::indoc! {"
         Failed to run
         - Input is not ASCII: '❌'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56
         - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56"});
 }
 ```
 "##
@@ -339,11 +339,11 @@ fn main()
 //!         - In second(): third() failed
 //!           - In third(): There were errors
 //!             - First error
-//!               at lazy_errors/src/lib.rs:1234:56
+//!               at src/lib.rs:1234:56
 //!             - Second error
-//!               at lazy_errors/src/lib.rs:1234:56
-//!             at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!               at src/lib.rs:1234:56
+//!             at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -391,11 +391,11 @@ fn main()
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Something went wrong: In third(): There were errors
 //!         - First error
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Second error
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         at lazy_errors/src/lib.rs:1234:56
-//!         at lazy_errors/src/lib.rs:1234:56"});
+//!           at src/lib.rs:1234:56
+//!         at src/lib.rs:1234:56
+//!         at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -458,7 +458,7 @@ fn main()
 //!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         In parent(): child() failed: Arbitrary String
-//!         at lazy_errors/src/lib.rs:1234:56"});
+//!         at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -622,15 +622,15 @@ fn main()
 //! Application failed
 //! - Input has correctable or uncorrectable errors
 //!   - Input 'f' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
+//!     at src/lib.rs:72:52
 //!   - Input 'oobar' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
+//!     at src/lib.rs:72:52
 //!   - Input '3b' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
-//!   at lazy_errors/src/lib.rs:43:14
+//!     at src/lib.rs:72:52
+//!   at src/lib.rs:43:14
 //! - Unsupported input 'oobar': invalid digit found in string
-//!   at lazy_errors/src/lib.rs:120:17
-//!   at lazy_errors/src/lib.rs:45:18
+//!   at src/lib.rs:120:17
+//!   at src/lib.rs:45:18
 //! ```
 //!
 //! [`or_stash`]: crate::OrStash::or_stash
@@ -710,7 +710,8 @@ pub fn doctest_line_num_helper(text: &str) -> String {
         }
     }
 
-    result = result.replace(".rs::", ".rs:1234:56");
-
-    result.replace('\\', "/")
+    result
+        .replace('\\', "/")
+        .replace("at lazy_errors/src/", "at src/")
+        .replace(".rs::", ".rs:1234:56")
 }

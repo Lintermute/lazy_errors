@@ -40,11 +40,11 @@ where
     ///     assert_eq!(printed, indoc::indoc! {"
     ///         Failed to write
     ///         - Input is not ASCII: '❌'
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
+    ///           at src/or_create_stash.rs:1234:56
+    ///           at src/or_create_stash.rs:1234:56
     ///         - Cleanup failed
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56"});
+    ///           at src/or_create_stash.rs:1234:56
+    ///           at src/or_create_stash.rs:1234:56"});
     /// }
     ///
     /// fn write_or_cleanup(text: &str) -> Result<(), Error> {
