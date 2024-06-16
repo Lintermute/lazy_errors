@@ -73,28 +73,74 @@ impl FromStr for MajorMinorPatch {
             format!("Doesn't match MAJOR.MINOR.PATCH: '{s}'")
         });
 
+        // TODO: Add collect_or_stash() to replace
+        // `let ok = iter.filter_map(…).collect(); try2!(…); Ok(ok)`.
+        // TODO: Or maybe this is two methods:
+        // `map_or_stash` and `collect_or_stashed` -- maybe the latter one
+        // isn't even a good idea because it's just try2!(errs.ok());
+        // TODO: Or maybe really collect_or_stash() that iterates over
+        // Item = Result<T, Stashable>, returning StashedResult (like errs.ok).
+        // This is like `partition`, but for Result. `try_partition`?
+
+        // let ok = s
+        //     .split('.')
+        //     .filter_map(|token| {
+        //         u16::from_str(token)
+        //             .map_err(|_| -> Error {
+        //                 err!("Not a valid number: '{token}'")
+        //             })
+        //             .or_stash(&mut errs)
+        //             .ok()
+        //     })
+        //     .collect::<Vec<_>>();
+        // try2!(errs.ok());
+
+        // let [major, minor, patch] = try2!(ok
+        //     .try_into()
+        //     .map_err(|_| Error::from_message(
+        //         "Invalid number of parts separated by '.'"
+        //     ))
+        //     .or_stash(&mut errs));
+
+        // Ok(Self {
+        //     major,
+        //     minor,
+        //     patch,
+        // })
+
+        // XXX: This should be fine now.
         let tokens: [&str; 3] = try2!(s
             .split('.')
             .collect::<Vec<_>>()
             .try_into()
-            .map_err(|_| {
-                Error::from_message("Invalid number of parts separated by '.'")
+            .map_err(|_| -> Error {
+                err!("Invalid number of parts separated by '.'")
             })
             .or_stash(&mut errs));
 
-        let [major, minor, patch] = tokens.map(|tok| {
-            u16::from_str(tok)
-                .map_err(|_| -> Error { err!("Not a valid number: '{s}'") })
-                .or_stash(&mut errs)
-                .ok()
-        });
+        // XXX: Use the new collect_or_stash() pattern here.
+        let tokens = tokens
+            .into_iter()
+            .filter_map(|t| {
+                u16::from_str(t)
+                    .map_err(|_| -> Error { err!("Not a valid number: '{t}'") })
+                    .or_stash(&mut errs)
+                    .ok()
+            })
+            .collect::<Vec<_>>();
+        try2!(errs.ok());
 
-        errs.into_result()?;
+        // XXX: If we use array.map_or_stash() instead of iter.collect_or_stash
+        // then we get rid of the temp vec and can remove this conversion.
+        let Ok([major, minor, patch]): Result<[u16; 3], _> = tokens.try_into()
+        else {
+            return Err(err!("Internal error: Version number parts got lost?"));
+        };
 
         Ok(Self {
-            major: major.unwrap(),
-            minor: minor.unwrap(),
-            patch: patch.unwrap(),
+            major,
+            minor,
+            patch,
         })
     }
 }
@@ -122,9 +168,11 @@ impl Display for VersionNumber {
 
 impl Display for MajorMinorPatch {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let major = self.major;
-        let minor = self.minor;
-        let patch = self.patch;
+        let Self {
+            major,
+            minor,
+            patch,
+        } = self;
 
         write!(f, "{major}.{minor}.{patch}")
     }
@@ -220,6 +268,12 @@ mod tests {
         assert_eq!(actual, expectation);
     }
 
+    #[test_case(""; "empty")]
+    #[test_case(" \n\t\r"; "only whitespace")]
+    fn version_from_git_describe_err(input: &str) {
+        assert!(super::version_from_git_describe(input).is_err());
+    }
+
     #[test_case(v(0, 0, 0), "0.0.0")]
     #[test_case(v(0, 0, 7), "0.0.7")]
     #[test_case(v(0, 7, 0), "0.7.0")]
@@ -231,19 +285,42 @@ mod tests {
         assert_eq!(&input.to_string(), expectation);
     }
 
-    #[test_case(""; "empty")]
-    #[test_case(" "; "only whitespace")]
-    fn version_from_git_describe_err(input: &str) {
-        assert!(super::version_from_git_describe(input).is_err());
-    }
-
     #[test_case(v(0, 0, 0), &[], true)]
     #[test_case(v(0, 0, 7), &[], true)]
     #[test_case(v(0, 7, 0), &[], true)]
     #[test_case(v(7, 0, 0), &[], true)]
     #[test_case(v(1, 2, 3), &[], true)]
-    #[test_case(v(0, 5, 0), &[], true)]
     #[test_case(custom("0.5.0-2-ga712af5"), &[], true)]
+    #[test_case(v(0, 0, 0), &[Pattern::MajorMinorPatch], true)]
+    #[test_case(v(0, 0, 7), &[Pattern::MajorMinorPatch], true)]
+    #[test_case(v(0, 7, 0), &[Pattern::MajorMinorPatch], true)]
+    #[test_case(v(7, 0, 0), &[Pattern::MajorMinorPatch], true)]
+    #[test_case(v(1, 2, 3), &[Pattern::MajorMinorPatch], true)]
+    #[test_case(custom("0.5.0-2-ga712af5"), &[Pattern::MajorMinorPatch], false)]
+    #[test_case(
+        v(0, 0, 0),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        true)]
+    #[test_case(
+        v(0, 0, 7),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        true)]
+    #[test_case(
+        v(0, 7, 0),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        true)]
+    #[test_case(
+        v(7, 0, 0),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        true)]
+    #[test_case(
+        v(1, 2, 3),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        true)]
+    #[test_case(
+        custom("0.5.0-2-ga712af5"),
+        &[Pattern::MajorMinorPatch, Pattern::MajorMinorPatch],
+        false)]
     fn is_accepted(v: VersionNumber, accept: &[Pattern], expectation: bool) {
         let actual = super::is_accepted(&v, accept);
         assert_eq!(actual, expectation);
