@@ -691,7 +691,7 @@ use alloc::string::String;
 /// Do not use this method.
 #[doc(hidden)]
 pub fn doctest_line_num_helper(text: &str) -> String {
-    use alloc::{format, string::ToString};
+    use alloc::string::ToString;
 
     // We need to call this method from the doctests.
     // Using a regex would require us to add the regex crate
