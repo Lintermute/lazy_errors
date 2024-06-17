@@ -159,6 +159,7 @@ pub fn run(command: &Version) -> Result<()> {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 fn run_import(args: &ImportArgs) -> Result<()> {
     crate::exec_and_capture(&["git", "describe", "--dirty"])
         .and_then(|stdout| parse_and_filter(&stdout, &args.accept))
@@ -183,10 +184,6 @@ fn parse_and_filter(
 
 fn parse_git_describe_output(output: &str) -> Result<VersionNumber> {
     let output = output.trim();
-
-    if output.is_empty() {
-        return Err(err!("Version number is empty"));
-    }
 
     let output = match output.strip_prefix('v') {
         Some(remainder) => remainder,
@@ -223,6 +220,39 @@ mod tests {
 
     fn custom(s: &str) -> VersionNumber {
         VersionNumber::CustomVersion(CustomVersion(s.to_owned()))
+    }
+
+    #[test_case("1.2.3", &[], Ok(v(1, 2, 3)))]
+    #[test_case("1.2.3", &[Pattern::MajorMinorPatch], Ok(v(1, 2, 3)))]
+    #[test_case("v1.2.3", &[], Ok(v(1, 2, 3)))]
+    #[test_case("v1.2.3", &[Pattern::MajorMinorPatch], Ok(v(1, 2, 3)))]
+    #[test_case("0.5.0-2-ga712af5", &[],
+        Ok(custom("0.5.0-2-ga712af5")))]
+    #[test_case("0.5.0-2-ga712af5", &[Pattern::MajorMinorPatch],
+        Err(String::from(
+            "Version '0.5.0-2-ga712af5' does not match any `accept` parameter"
+        )))]
+    #[test_case("v0.5.0-2-ga712af5", &[],
+        Ok(custom("0.5.0-2-ga712af5")))]
+    #[test_case("v0.5.0-2-ga712af5", &[Pattern::MajorMinorPatch],
+        Err(String::from(
+            "Version '0.5.0-2-ga712af5' does not match any `accept` parameter"
+        )))]
+    fn parse_and_filter(
+        input: &str,
+        accept: &[Pattern],
+        expectation: Result<VersionNumber, String>,
+    ) {
+        let actual = super::parse_and_filter(input, accept);
+
+        match expectation {
+            Ok(v) => assert_eq!(v, actual.unwrap()),
+            Err(e) => {
+                let actual = actual.unwrap_err();
+                dbg!(&actual);
+                assert_eq!(actual.to_string(), e);
+            }
+        }
     }
 
     #[test_case("0.0.0", v(0, 0, 0))]

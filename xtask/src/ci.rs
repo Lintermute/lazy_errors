@@ -360,6 +360,7 @@ impl std::fmt::Display for Profile {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn run(command: &Ci) -> Result<()> {
     crate::exec_all(&tasklist_from(command))
 }
