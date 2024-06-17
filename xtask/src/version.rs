@@ -73,42 +73,6 @@ impl FromStr for MajorMinorPatch {
             format!("Doesn't match MAJOR.MINOR.PATCH: '{s}'")
         });
 
-        // TODO: Add collect_or_stash() to replace
-        // `let ok = iter.filter_map(…).collect(); try2!(…); Ok(ok)`.
-        // TODO: Or maybe this is two methods:
-        // `map_or_stash` and `collect_or_stashed` -- maybe the latter one
-        // isn't even a good idea because it's just try2!(errs.ok());
-        // TODO: Or maybe really collect_or_stash() that iterates over
-        // Item = Result<T, Stashable>, returning StashedResult (like errs.ok).
-        // This is like `partition`, but for Result. `try_partition`?
-
-        // let ok = s
-        //     .split('.')
-        //     .filter_map(|token| {
-        //         u16::from_str(token)
-        //             .map_err(|_| -> Error {
-        //                 err!("Not a valid number: '{token}'")
-        //             })
-        //             .or_stash(&mut errs)
-        //             .ok()
-        //     })
-        //     .collect::<Vec<_>>();
-        // try2!(errs.ok());
-
-        // let [major, minor, patch] = try2!(ok
-        //     .try_into()
-        //     .map_err(|_| Error::from_message(
-        //         "Invalid number of parts separated by '.'"
-        //     ))
-        //     .or_stash(&mut errs));
-
-        // Ok(Self {
-        //     major,
-        //     minor,
-        //     patch,
-        // })
-
-        // XXX: This should be fine now.
         let tokens: [&str; 3] = try2!(s
             .split('.')
             .collect::<Vec<_>>()
@@ -118,7 +82,8 @@ impl FromStr for MajorMinorPatch {
             })
             .or_stash(&mut errs));
 
-        // XXX: Use the new collect_or_stash() pattern here.
+        // TODO: Add try_collect_or_stash() to replace
+        // `let x = iter.filter_map(…).collect(); try2!(errs.ok()); Ok(x)`.
         let tokens = tokens
             .into_iter()
             .filter_map(|t| {
@@ -130,8 +95,11 @@ impl FromStr for MajorMinorPatch {
             .collect::<Vec<_>>();
         try2!(errs.ok());
 
-        // XXX: If we use array.map_or_stash() instead of iter.collect_or_stash
-        // then we get rid of the temp vec and can remove this conversion.
+        // By staying with [_; n] instead of Vec we could get rid of that block.
+        //
+        // TODO: Similar to `array::try_map`, we could add a matching
+        // `array::try_map_or_stash` (similar to `try_collect_or_stash`).
+        // https://github.com/rust-lang/rust/issues/79711
         let Ok([major, minor, patch]): Result<[u16; 3], _> = tokens.try_into()
         else {
             return Err(err!("Internal error: Version number parts got lost?"));
@@ -184,6 +152,7 @@ impl Display for CustomVersion {
     }
 }
 
+#[cfg(not(tarpaulin_include))]
 pub fn run(command: &Version) -> Result<()> {
     match command {
         Version::Import(args) => run_import(args),
@@ -191,19 +160,28 @@ pub fn run(command: &Version) -> Result<()> {
 }
 
 fn run_import(args: &ImportArgs) -> Result<()> {
-    let version = crate::exec_and_capture(&["git", "describe", "--dirty"])?;
-    let version = version_from_git_describe(&version)?;
+    crate::exec_and_capture(&["git", "describe", "--dirty"])
+        .and_then(|stdout| parse_and_filter(&stdout, &args.accept))
+        .and_then(|v| crate::exec(&["cargo", "set-version", &v.to_string()]))
+        .or_wrap_with(|| "Failed to set version number based on `git describe`")
+}
 
-    if !is_accepted(&version, &args.accept) {
+fn parse_and_filter(
+    git_output: &str,
+    accept: &[Pattern],
+) -> Result<VersionNumber> {
+    let version = parse_git_describe_output(git_output)?;
+
+    if !is_accepted(&version, accept) {
         return Err(err!(
             "Version '{version}' does not match any `accept` parameter"
         ));
     }
 
-    crate::exec(&["cargo", "set-version", &version.to_string()])
+    Ok(version)
 }
 
-fn version_from_git_describe(output: &str) -> Result<VersionNumber> {
+fn parse_git_describe_output(output: &str) -> Result<VersionNumber> {
     let output = output.trim();
 
     if output.is_empty() {
@@ -263,15 +241,15 @@ mod tests {
     #[test_case("abcdef", custom("abcdef"))]
     #[test_case("foobar", custom("foobar"))]
     #[test_case("-1.-2.-3", custom("-1.-2.-3"))]
-    fn version_from_git_describe(input: &str, expectation: VersionNumber) {
-        let actual = super::version_from_git_describe(input).unwrap();
+    fn parse_git_describe_output(input: &str, expectation: VersionNumber) {
+        let actual = super::parse_git_describe_output(input).unwrap();
         assert_eq!(actual, expectation);
     }
 
     #[test_case(""; "empty")]
     #[test_case(" \n\t\r"; "only whitespace")]
-    fn version_from_git_describe_err(input: &str) {
-        assert!(super::version_from_git_describe(input).is_err());
+    fn parse_git_describe_output_err(input: &str) {
+        assert!(super::parse_git_describe_output(input).is_err());
     }
 
     #[test_case(v(0, 0, 0), "0.0.0")]
