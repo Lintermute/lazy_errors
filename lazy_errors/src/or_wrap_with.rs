@@ -27,8 +27,7 @@ where
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
+    /// fn main() {
     ///     assert!(run(&["foo", "bar"]).is_ok());
     ///
     ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
@@ -39,13 +38,11 @@ where
     ///         at lazy_errors/src/or_wrap_with.rs:1234:56"});
     /// }
     ///
-    /// fn run(tokens: &[&str]) -> Result<(), Error>
-    /// {
+    /// fn run(tokens: &[&str]) -> Result<(), Error> {
     ///     all_ascii(tokens).or_wrap_with(|| "Input is not ASCII")
     /// }
     ///
-    /// fn all_ascii(tokens: &[&str]) -> Result<(), String>
-    /// {
+    /// fn all_ascii(tokens: &[&str]) -> Result<(), String> {
     ///     match tokens.iter().find(|s| !s.is_ascii()) {
     ///         None => Ok(()),
     ///         Some(not_ascii) => Err(not_ascii.to_string()),
@@ -59,7 +56,8 @@ where
     /// [`WrappedError`]: crate::WrappedError
     /// [`or_wrap`]: crate::OrWrap::or_wrap
     fn or_wrap_with<I>(self, f: F) -> Result<T, Error<I>>
-    where E: Into<I>;
+    where
+        E: Into<I>;
 }
 
 impl<F, M, T, E> OrWrapWith<F, M, T, E> for Result<T, E>
@@ -69,7 +67,8 @@ where
 {
     #[track_caller]
     fn or_wrap_with<I>(self, f: F) -> Result<T, Error<I>>
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         match self {
             Ok(t) => Ok(t),

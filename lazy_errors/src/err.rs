@@ -11,8 +11,7 @@
 /// ```
 /// use lazy_errors::prelude::*;
 ///
-/// fn handle_ascii(text: &str) -> Result<(), Error>
-/// {
+/// fn handle_ascii(text: &str) -> Result<(), Error> {
 ///     if !text.is_ascii() {
 ///         return Err(err!("Not ASCII: '{text}'"));
 ///     }

@@ -14,8 +14,7 @@ use super::CommandLine;
 type TaskList = Vec<CommandLine>;
 
 #[derive(clap::Subcommand, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub enum Ci
-{
+pub enum Ci {
     /// Runs the entire CI quality gate in the workspace on your local machine.
     ///
     /// Lints, builds, and tests code, documentation, and dependencies.
@@ -103,8 +102,7 @@ pub enum Ci
 }
 
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct AllArgs
-{
+pub struct AllArgs {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     ///
     /// If missing, run all steps affected by this flag in `dev` profile first.
@@ -153,8 +151,7 @@ pub struct AllArgs
 }
 
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct QuickArgs
-{
+pub struct QuickArgs {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long, default_value_t = Profile::Dev)]
     profile: Profile,
@@ -238,44 +235,14 @@ pub struct QuickArgs
 }
 
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct CheckArgs
-{
+pub struct CheckArgs {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long)]
     profile: Profile,
 }
 
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct TestArgs
-{
-    /// Whether to pass `--release` to cargo or run in `dev` profile.
-    #[clap(long)]
-    profile: Profile,
-
-    /// Run ignored tests as well.
-    #[clap(long)]
-    include_ignored_tests: bool,
-}
-
-#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct DocsArgs
-{
-    /// Whether to pass `--release` to cargo or run in `dev` profile.
-    #[clap(long)]
-    profile: Profile,
-}
-
-#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct BuildArgs
-{
-    #[clap(long)]
-    /// Whether to pass `--release` to cargo or run in `dev` profile.
-    profile: Profile,
-}
-
-#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct CoverageArgs
-{
+pub struct TestArgs {
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long)]
     profile: Profile,
@@ -286,32 +253,51 @@ pub struct CoverageArgs
 }
 
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-pub struct MiriArgs
-{
+pub struct DocsArgs {
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+}
+
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
+pub struct BuildArgs {
+    #[clap(long)]
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    profile: Profile,
+}
+
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
+pub struct CoverageArgs {
+    /// Whether to pass `--release` to cargo or run in `dev` profile.
+    #[clap(long)]
+    profile: Profile,
+
+    /// Run ignored tests as well.
+    #[clap(long)]
+    include_ignored_tests: bool,
+}
+
+#[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
+pub struct MiriArgs {
     /// Run ignored tests as well.
     #[clap(long)]
     include_ignored_tests: bool,
 }
 
 #[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-enum Profile
-{
+enum Profile {
     Dev,
     Release,
 }
 
-impl CheckArgs
-{
-    fn new(profile: Profile) -> Self
-    {
+impl CheckArgs {
+    fn new(profile: Profile) -> Self {
         Self { profile }
     }
 }
 
-impl TestArgs
-{
-    fn new(args: &AllArgs, profile: Profile) -> Self
-    {
+impl TestArgs {
+    fn new(args: &AllArgs, profile: Profile) -> Self {
         Self {
             profile,
             include_ignored_tests: args.include_ignored_tests,
@@ -319,26 +305,20 @@ impl TestArgs
     }
 }
 
-impl DocsArgs
-{
-    fn new(profile: Profile) -> Self
-    {
+impl DocsArgs {
+    fn new(profile: Profile) -> Self {
         Self { profile }
     }
 }
 
-impl BuildArgs
-{
-    fn new(profile: Profile) -> Self
-    {
+impl BuildArgs {
+    fn new(profile: Profile) -> Self {
         Self { profile }
     }
 }
 
-impl CoverageArgs
-{
-    fn new(args: &AllArgs, profile: Profile) -> Self
-    {
+impl CoverageArgs {
+    fn new(args: &AllArgs, profile: Profile) -> Self {
         Self {
             profile,
             include_ignored_tests: args.include_ignored_tests_in_coverage,
@@ -346,20 +326,16 @@ impl CoverageArgs
     }
 }
 
-impl MiriArgs
-{
-    fn new(args: &AllArgs) -> Self
-    {
+impl MiriArgs {
+    fn new(args: &AllArgs) -> Self {
         Self {
             include_ignored_tests: args.include_ignored_tests,
         }
     }
 }
 
-impl From<&QuickArgs> for AllArgs
-{
-    fn from(value: &QuickArgs) -> Self
-    {
+impl From<&QuickArgs> for AllArgs {
+    fn from(value: &QuickArgs) -> Self {
         Self {
             profile: Some(value.profile),
             include_ignored_tests: value.include_ignored_tests,
@@ -375,10 +351,8 @@ impl From<&QuickArgs> for AllArgs
     }
 }
 
-impl std::fmt::Display for Profile
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
-    {
+impl std::fmt::Display for Profile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Profile::Dev => write!(f, "dev"),
             Profile::Release => write!(f, "release"),
@@ -386,13 +360,11 @@ impl std::fmt::Display for Profile
     }
 }
 
-pub fn run(command: &Ci) -> Result<()>
-{
+pub fn run(command: &Ci) -> Result<()> {
     crate::exec_all(&tasklist_from(command))
 }
 
-fn tasklist_from(args: &Ci) -> TaskList
-{
+fn tasklist_from(args: &Ci) -> TaskList {
     match args {
         Ci::All(args) => all(args),
         Ci::Quick(args) => quick(args),
@@ -407,8 +379,7 @@ fn tasklist_from(args: &Ci) -> TaskList
     }
 }
 
-fn all(args: &AllArgs) -> TaskList
-{
+fn all(args: &AllArgs) -> TaskList {
     let mut tasklist = Vec::new();
 
     if !args.skip_moving_targets && !args.skip_rustfmt {
@@ -420,7 +391,7 @@ fn all(args: &AllArgs) -> TaskList
         None => {
             tasklist.extend(compile_and_test(args, Profile::Dev));
             tasklist.extend(compile_and_test(args, Profile::Release));
-        },
+        }
     }
 
     if !args.skip_moving_targets {
@@ -440,13 +411,11 @@ fn all(args: &AllArgs) -> TaskList
     tasklist
 }
 
-fn quick(args: &QuickArgs) -> TaskList
-{
+fn quick(args: &QuickArgs) -> TaskList {
     all(&AllArgs::from(args))
 }
 
-fn compile_and_test(args: &AllArgs, profile: Profile) -> TaskList
-{
+fn compile_and_test(args: &AllArgs, profile: Profile) -> TaskList {
     let mut tasklist = Vec::new();
 
     if !args.skip_moving_targets {
@@ -470,13 +439,11 @@ fn compile_and_test(args: &AllArgs, profile: Profile) -> TaskList
     tasklist
 }
 
-fn rustfmt() -> CommandLine
-{
+fn rustfmt() -> CommandLine {
     vec!["cargo", "+nightly", "--locked", "fmt", "--check", "--all"]
 }
 
-fn check(args: &CheckArgs) -> CommandLine
-{
+fn check(args: &CheckArgs) -> CommandLine {
     // It looks like there is no way to specify doctests here.
 
     let mut task = vec![
@@ -498,8 +465,7 @@ fn check(args: &CheckArgs) -> CommandLine
     task
 }
 
-fn clippy(args: &CheckArgs) -> CommandLine
-{
+fn clippy(args: &CheckArgs) -> CommandLine {
     // Clippy seems to use the same arguments as `cargo check`.
     // It looks like there is no way to specify doctests here.
 
@@ -524,8 +490,7 @@ fn clippy(args: &CheckArgs) -> CommandLine
     task
 }
 
-fn test(args: &TestArgs) -> CommandLine
-{
+fn test(args: &TestArgs) -> CommandLine {
     // WARNING: `--all-targets` enables benchmarks and disables doctests.
     let mut task = vec![
         "cargo",
@@ -549,8 +514,7 @@ fn test(args: &TestArgs) -> CommandLine
     task
 }
 
-fn docs(args: &DocsArgs) -> CommandLine
-{
+fn docs(args: &DocsArgs) -> CommandLine {
     // Make `cargo doc` raise an error if there are any warnings.
     env::set_var("RUSTDOCFLAGS", "-Dwarnings");
 
@@ -576,8 +540,7 @@ fn docs(args: &DocsArgs) -> CommandLine
     task
 }
 
-fn build(args: &BuildArgs) -> CommandLine
-{
+fn build(args: &BuildArgs) -> CommandLine {
     let mut task = vec![
         "cargo",
         "hack",
@@ -598,8 +561,7 @@ fn build(args: &BuildArgs) -> CommandLine
     task
 }
 
-fn tarpaulin(args: &CoverageArgs) -> CommandLine
-{
+fn tarpaulin(args: &CoverageArgs) -> CommandLine {
     // WARNING: `--all-targets` enables benchmarks and disables doctests.
     let mut task = vec![
         "cargo",
@@ -616,10 +578,10 @@ fn tarpaulin(args: &CoverageArgs) -> CommandLine
         Profile::Release => {
             task.extend(&["--output-dir", "tarpaulin-report-release"]);
             task.push("--release");
-        },
+        }
         Profile::Dev => {
             task.extend(&["--output-dir", "tarpaulin-report-dev"]);
-        },
+        }
     }
 
     if args.include_ignored_tests {
@@ -629,8 +591,7 @@ fn tarpaulin(args: &CoverageArgs) -> CommandLine
     task
 }
 
-fn miri(args: &MiriArgs) -> [CommandLine; 3]
-{
+fn miri(args: &MiriArgs) -> [CommandLine; 3] {
     // Remove (non-)MIRI outputs
     let clean = vec!["cargo", "+nightly", "--locked", "clean"];
 
@@ -655,8 +616,7 @@ fn miri(args: &MiriArgs) -> [CommandLine; 3]
     [clean.clone(), test, clean]
 }
 
-fn deps() -> [CommandLine; 3]
-{
+fn deps() -> [CommandLine; 3] {
     let upgrades = vec!["cargo", "upgrades"];
     let update = vec!["cargo", "--locked", "update"];
     let audit = vec!["cargo", "--locked", "audit", "--deny", "warnings"];
@@ -665,8 +625,7 @@ fn deps() -> [CommandLine; 3]
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
 
     use lazy_errors::Result;
     use test_case::test_case;
@@ -790,8 +749,7 @@ mod tests
     fn transform_args_to_tasks(
         args: &[&str],
         tasklist: &[&[&str]],
-    ) -> Result<()>
-    {
+    ) -> Result<()> {
         let tasks = tasklist_from(&parse_ci_args(args)?);
         assert_eq!(&tasks, tasklist);
         Ok(())
@@ -839,17 +797,17 @@ mod tests
                 "--output-dir", "tarpaulin-report-release",
                 "--release", "--", "--include-ignored"],
         ]; "can run ignored tests only for coverage")]
-    fn tasklist_contains(args: &[&str], task_sublist: &[&[&str]])
-        -> Result<()>
-    {
+    fn tasklist_contains(
+        args: &[&str],
+        task_sublist: &[&[&str]],
+    ) -> Result<()> {
         let mut tasks = super::tasklist_from(&parse_ci_args(args)?);
         tasks.retain(|task| task_sublist.contains(&task.as_ref()));
         assert_eq!(&tasks, task_sublist);
         Ok(())
     }
 
-    fn parse_ci_args(args: &[&str]) -> Result<Ci>
-    {
+    fn parse_ci_args(args: &[&str]) -> Result<Ci> {
         match crate::parse_args(args)? {
             crate::Xtask::Ci(args) => Ok(args),
             other => panic!("Unexpected args type: {other:?}"),

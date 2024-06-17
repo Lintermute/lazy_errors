@@ -81,18 +81,16 @@ errs.push(MyExpensiveType);
 "##
 )]
 #[cfg(any(not(feature = "std"), doc))]
-pub trait Reportable: Display + Debug
-{
-}
+pub trait Reportable: Display + Debug {}
 
 /// Makes all [`Reportable`]s implement `Into<Box<dyn Reportable>>` so that
 /// they satisfy the `E: Into<I>` constraint used throughout this crate.
 #[cfg(not(feature = "std"))]
 impl<'a, E> From<E> for Box<dyn Reportable + 'a>
-where E: Reportable + 'a
+where
+    E: Reportable + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -101,10 +99,10 @@ where E: Reportable + 'a
 /// they satisfy the `E: Into<I>` constraint used throughout this crate.
 #[cfg(not(feature = "std"))]
 impl<'a, E> From<E> for Box<dyn Reportable + Send + 'a>
-where E: Reportable + Send + 'a
+where
+    E: Reportable + Send + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -113,10 +111,10 @@ where E: Reportable + Send + 'a
 /// they satisfy the `E: Into<I>` constraint used throughout this crate.
 #[cfg(not(feature = "std"))]
 impl<'a, E> From<E> for Box<dyn Reportable + Sync + 'a>
-where E: Reportable + Sync + 'a
+where
+    E: Reportable + Sync + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -125,170 +123,106 @@ where E: Reportable + Sync + 'a
 /// they satisfy the `E: Into<I>` constraint used throughout this crate.
 #[cfg(not(feature = "std"))]
 impl<'a, E> From<E> for Box<dyn Reportable + Send + Sync + 'a>
-where E: Reportable + Send + Sync + 'a
+where
+    E: Reportable + Send + Sync + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
 
 #[cfg(not(feature = "std"))]
-impl<I> Reportable for Error<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for Error<I> where I: Display + Debug {}
 
 #[cfg(not(feature = "std"))]
-impl<I> Reportable for ErrorData<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for ErrorData<I> where I: Display + Debug {}
 
 #[cfg(not(feature = "std"))]
-impl<I> Reportable for StashedErrors<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for StashedErrors<I> where I: Display + Debug {}
 
 #[cfg(not(feature = "std"))]
-impl<I> Reportable for WrappedError<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for WrappedError<I> where I: Display + Debug {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for AdHocError
-{
-}
+impl Reportable for AdHocError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::string::String
-{
-}
+impl Reportable for alloc::string::String {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for &str
-{
-}
+impl Reportable for &str {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::convert::Infallible
-{
-}
+impl Reportable for core::convert::Infallible {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::alloc::LayoutError
-{
-}
+impl Reportable for core::alloc::LayoutError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::array::TryFromSliceError
-{
-}
+impl Reportable for core::array::TryFromSliceError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::cell::BorrowError
-{
-}
+impl Reportable for core::cell::BorrowError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::cell::BorrowMutError
-{
-}
+impl Reportable for core::cell::BorrowMutError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::char::CharTryFromError
-{
-}
+impl Reportable for core::char::CharTryFromError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::char::DecodeUtf16Error
-{
-}
+impl Reportable for core::char::DecodeUtf16Error {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::char::ParseCharError
-{
-}
+impl Reportable for core::char::ParseCharError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::char::TryFromCharError
-{
-}
+impl Reportable for core::char::TryFromCharError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::collections::TryReserveError
-{
-}
+impl Reportable for alloc::collections::TryReserveError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::ffi::FromBytesUntilNulError
-{
-}
+impl Reportable for core::ffi::FromBytesUntilNulError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::ffi::FromBytesWithNulError
-{
-}
+impl Reportable for core::ffi::FromBytesWithNulError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::ffi::FromVecWithNulError
-{
-}
+impl Reportable for alloc::ffi::FromVecWithNulError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::ffi::IntoStringError
-{
-}
+impl Reportable for alloc::ffi::IntoStringError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::ffi::NulError
-{
-}
+impl Reportable for alloc::ffi::NulError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::fmt::Error
-{
-}
+impl Reportable for core::fmt::Error {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::net::AddrParseError
-{
-}
+impl Reportable for core::net::AddrParseError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::num::ParseFloatError
-{
-}
+impl Reportable for core::num::ParseFloatError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::num::ParseIntError
-{
-}
+impl Reportable for core::num::ParseIntError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::num::TryFromIntError
-{
-}
+impl Reportable for core::num::TryFromIntError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::str::ParseBoolError
-{
-}
+impl Reportable for core::str::ParseBoolError {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::str::Utf8Error
-{
-}
+impl Reportable for core::str::Utf8Error {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::string::FromUtf8Error
-{
-}
+impl Reportable for alloc::string::FromUtf8Error {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for alloc::string::FromUtf16Error
-{
-}
+impl Reportable for alloc::string::FromUtf16Error {}
 
 #[cfg(not(feature = "std"))]
-impl Reportable for core::time::TryFromFloatSecsError
-{
-}
+impl Reportable for core::time::TryFromFloatSecsError {}

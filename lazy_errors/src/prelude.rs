@@ -12,13 +12,7 @@
 #[cfg(not(feature = "std"))]
 pub use crate::reportable::Reportable;
 pub use crate::{
-    boxed::*,
-    err,
-    OrCreateStash,
-    OrStash,
-    OrWrap,
-    OrWrapWith,
-    StashedResult,
+    boxed::*, err, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashedResult,
 };
 #[cfg(feature = "eyre")]
 pub use crate::{IntoEyreReport, IntoEyreResult};

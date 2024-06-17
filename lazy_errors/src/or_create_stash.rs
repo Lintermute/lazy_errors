@@ -31,8 +31,7 @@ where
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
+    /// fn main() {
     ///     assert!(write_or_cleanup("ASCII text").is_ok());
     ///
     ///     let err = write_or_cleanup("❌").unwrap_err();
@@ -48,20 +47,18 @@ where
     ///           at lazy_errors/src/or_create_stash.rs:1234:56"});
     /// }
     ///
-    /// fn write_or_cleanup(text: &str) -> Result<(), Error>
-    /// {
+    /// fn write_or_cleanup(text: &str) -> Result<(), Error> {
     ///     match write(text).or_create_stash(|| "Failed to write") {
     ///         Ok(()) => Ok(()),
     ///         Err(mut stash) => {
     ///             write("Recovering...").or_stash(&mut stash);
     ///             cleanup().or_stash(&mut stash);
     ///             return Err(stash.into());
-    ///         },
+    ///         }
     ///     }
     /// }
     ///
-    /// fn write(text: &str) -> Result<(), Error>
-    /// {
+    /// fn write(text: &str) -> Result<(), Error> {
     ///     if !text.is_ascii() {
     ///         return Err(err!("Input is not ASCII: '{text}'"));
     ///     }
@@ -69,8 +66,7 @@ where
     ///     Ok(())
     /// }
     ///
-    /// fn cleanup() -> Result<(), Error>
-    /// {
+    /// fn cleanup() -> Result<(), Error> {
     ///     Err(err!("Cleanup failed"))
     /// }
     /// ```
@@ -82,7 +78,8 @@ where
     /// [`ErrorStash`]: crate::ErrorStash
     /// [`or_stash`]: crate::OrStash::or_stash
     fn or_create_stash<I>(self, f: F) -> Result<T, StashWithErrors<I>>
-    where E: Into<I>;
+    where
+        E: Into<I>;
 }
 
 impl<F, M, T, E> OrCreateStash<F, M, T, E> for Result<T, E>
@@ -92,7 +89,8 @@ where
 {
     #[track_caller]
     fn or_create_stash<I>(self, f: F) -> Result<T, StashWithErrors<I>>
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         match self {
             Ok(v) => Ok(v),

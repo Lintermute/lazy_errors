@@ -8,8 +8,7 @@
 //!
 //! use lazy_errors::{prelude::*, try2, Result};
 //!
-//! fn run(input1: &str, input2: &str) -> Result<()>
-//! {
+//! fn run(input1: &str, input2: &str) -> Result<()> {
 //!     let mut errs = ErrorStash::new(|| "There were one or more errors");
 //!
 //!     u8::from_str("42").or_stash(&mut errs); // `errs` contains 0 errors
@@ -32,8 +31,7 @@
 //!     errs.into() // `Ok(())` if `errs` is still empty, `Err` otherwise
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run("❓", "❗").unwrap_err();
 //!     let n = err.childs().len();
 //!     eprintln!("Got {n} error(s).");
@@ -125,8 +123,7 @@
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn run() -> Result<(), Error>
-//! {
+//! fn run() -> Result<(), Error> {
 //!     let mut stash = ErrorStash::new(|| "Failed to run application");
 //!
 //!     print_if_ascii("🙈").or_stash(&mut stash);
@@ -139,8 +136,7 @@
 //!     stash.into() // `Ok(())` if the stash was still empty
 //! }
 //!
-//! fn print_if_ascii(text: &str) -> Result<(), Error>
-//! {
+//! fn print_if_ascii(text: &str) -> Result<(), Error> {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
 //!     }
@@ -149,13 +145,11 @@
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<(), Error>
-//! {
+//! fn cleanup() -> Result<(), Error> {
 //!     Err(err!("Cleanup failed"))
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -208,32 +202,28 @@
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn run() -> Result<(), Error>
-//! {
+//! fn run() -> Result<(), Error> {
 //!     match write("❌").or_create_stash(|| "Failed to run application") {
 //!         Ok(()) => Ok(()),
 //!         Err(mut stash) => {
 //!             cleanup().or_stash(&mut stash);
 //!             Err(stash.into())
-//!         },
+//!         }
 //!     }
 //! }
 //!
-//! fn write(text: &str) -> Result<(), Error>
-//! {
+//! fn write(text: &str) -> Result<(), Error> {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
 //!     }
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<(), Error>
-//! {
+//! fn cleanup() -> Result<(), Error> {
 //!     Err(err!("Cleanup failed"))
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -319,22 +309,19 @@ fn main()
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn first() -> Result<(), Error>
-//! {
+//! fn first() -> Result<(), Error> {
 //!     let mut stash = ErrorStash::new(|| "In first(): second() failed");
 //!     stash.push(second().unwrap_err());
 //!     stash.into()
 //! }
 //!
-//! fn second() -> Result<(), Error>
-//! {
+//! fn second() -> Result<(), Error> {
 //!     let mut stash = ErrorStash::new(|| "In second(): third() failed");
 //!     stash.push(third().unwrap_err());
 //!     stash.into()
 //! }
 //!
-//! fn third() -> Result<(), Error>
-//! {
+//! fn third() -> Result<(), Error> {
 //!     let mut stash = ErrorStash::new(|| "In third(): There were errors");
 //!
 //!     stash.push("First error");
@@ -343,8 +330,7 @@ fn main()
 //!     stash.into()
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = first().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -458,18 +444,15 @@ fn main()
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 //! use lazy_errors::prelude::*;
 //!
-//! fn parent() -> Result<(), Error>
-//! {
+//! fn parent() -> Result<(), Error> {
 //!     child().or_wrap_with(|| "In parent(): child() failed")
 //! }
 //!
-//! fn child() -> Result<(), String>
-//! {
+//! fn child() -> Result<(), String> {
 //!     Err(String::from("Arbitrary String"))
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = parent().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -511,18 +494,11 @@ fn main()
 //! use std::str::FromStr;
 //!
 //! use lazy_errors::{
-//!     err,
-//!     Error,
-//!     ErrorStash,
-//!     OrStash,
-//!     Result,
-//!     Stashable,
-//!     StashedResult,
+//!     err, Error, ErrorStash, OrStash, Result, Stashable, StashedResult,
 //! };
 //!
 //! #[derive(thiserror::Error, Debug)]
-//! pub enum CustomError<'a>
-//! {
+//! pub enum CustomError<'a> {
 //!     #[error("Input is empty")]
 //!     EmptyInput,
 //!
@@ -534,14 +510,12 @@ fn main()
 //! type ParserError<'a> = Error<CustomError<'a>>;
 //! type ParserStash<'a, F, M> = ErrorStash<F, M, CustomError<'a>>;
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run(&["42", "0xA", "f", "oobar", "3b"]).unwrap_err();
 //!     eprintln!("{err:#}");
 //! }
 //!
-//! fn run<'a>(input: &[&'a str]) -> Result<(), Error<Stashable<'a>>>
-//! {
+//! fn run<'a>(input: &[&'a str]) -> Result<(), Error<Stashable<'a>>> {
 //!     let mut errs = ErrorStash::new(|| "Application failed");
 //!
 //!     let parser_result = parse_input(input); // Soft errors
@@ -561,8 +535,7 @@ fn main()
 //!     errs.into()
 //! }
 //!
-//! fn parse_input<'a>(input: &[&'a str]) -> Result<(), ParserError<'a>>
-//! {
+//! fn parse_input<'a>(input: &[&'a str]) -> Result<(), ParserError<'a>> {
 //!     if input.is_empty() {
 //!         return Err(Error::wrap(CustomError::EmptyInput));
 //!     }
@@ -592,8 +565,7 @@ fn main()
 //!     errs.into() // Return list of all parser errors, if any
 //! }
 //!
-//! fn handle_parser_errors(errs: &ParserError) -> Result<()>
-//! {
+//! fn handle_parser_errors(errs: &ParserError) -> Result<()> {
 //!     println!("Step #2: Starting...");
 //!
 //!     for e in errs.childs() {
@@ -608,25 +580,23 @@ fn main()
 //!     Ok(())
 //! }
 //!
-//! fn parse_u32(s: &str) -> Result<u32, CustomError>
-//! {
+//! fn parse_u32(s: &str) -> Result<u32, CustomError> {
 //!     s.strip_prefix("0x")
 //!         .map(|hex| u32::from_str_radix(hex, 16))
 //!         .unwrap_or_else(|| u32::from_str(s))
 //!         .map_err(|_| CustomError::NotU32(s))
 //! }
 //!
-//! fn guess_hex(s: &str) -> Result<u32>
-//! {
+//! fn guess_hex(s: &str) -> Result<u32> {
 //!     match u32::from_str_radix(s, 16) {
 //!         Ok(v) => {
 //!             println!("Step #2: '{s}' is not u32. Did you mean '{v:#X}'?");
 //!             Ok(v)
-//!         },
+//!         }
 //!         Err(e) => {
 //!             println!("Step #2: '{s}' is not u32. Aborting program.");
 //!             Err(err!("Unsupported input '{s}': {e}"))
-//!         },
+//!         }
 //!     }
 //! }
 //! ```
@@ -720,8 +690,7 @@ use alloc::string::String;
 /// We just need this to be able to use [`assert_eq`] in doctests.
 /// Do not use this method.
 #[doc(hidden)]
-pub fn doctest_line_num_helper(text: &str) -> String
-{
+pub fn doctest_line_num_helper(text: &str) -> String {
     use alloc::{format, string::ToString};
 
     // We need to call this method from the doctests.

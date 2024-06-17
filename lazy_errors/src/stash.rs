@@ -7,8 +7,7 @@ use alloc::{
 
 use crate::{
     error::{self, Location},
-    Error,
-    StashedResult,
+    Error, StashedResult,
 };
 
 /// A builder for [`Error`] that keeps a list of errors
@@ -98,8 +97,7 @@ where
 /// (instead of `Into<Result>` or `IntoEyreResult`).
 /// Please note that the conversion to `eyre::Report` is lossy.
 #[derive(Debug)]
-pub struct StashWithErrors<I>
-{
+pub struct StashWithErrors<I> {
     summary:   Box<str>,
     errors:    Vec<I>,
     locations: Vec<Location>,
@@ -111,8 +109,7 @@ where
     M: Display,
     I: Debug,
 {
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
-    {
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result {
         match self {
             Self::Empty(_) => write!(f, "ErrorStash(Empty)"),
             Self::WithErrors(errs) => {
@@ -120,7 +117,7 @@ where
                 Debug::fmt(errs, f)?;
                 write!(f, ")")?;
                 Ok(())
-            },
+            }
         }
     }
 }
@@ -130,8 +127,7 @@ where
     F: FnOnce() -> M,
     M: Display,
 {
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
-    {
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result {
         match self {
             Self::Empty(_) => display::<I>(f, &[]),
             Self::WithErrors(errs) => Display::fmt(errs, f),
@@ -139,10 +135,8 @@ where
     }
 }
 
-impl<I> Display for StashWithErrors<I>
-{
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
-    {
+impl<I> Display for StashWithErrors<I> {
+    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result {
         display(f, self.errors())
     }
 }
@@ -152,8 +146,7 @@ where
     F: FnOnce() -> M,
     M: Display,
 {
-    fn from(stash: ErrorStash<F, M, I>) -> Self
-    {
+    fn from(stash: ErrorStash<F, M, I>) -> Self {
         match stash {
             ErrorStash::Empty(_) => Ok(()),
             ErrorStash::WithErrors(stash) => Err(stash.into()),
@@ -161,10 +154,8 @@ where
     }
 }
 
-impl<I> From<StashWithErrors<I>> for Error<I>
-{
-    fn from(stash: StashWithErrors<I>) -> Self
-    {
+impl<I> From<StashWithErrors<I>> for Error<I> {
+    fn from(stash: StashWithErrors<I>) -> Self {
         Error::from_stash(stash.summary, stash.errors, stash.locations)
     }
 }
@@ -177,15 +168,15 @@ where
     /// Creates a new [`ErrorStash`] with a “lazy” error summary message
     /// that will be evaluated when the first error (if any) is added
     /// to the stash.
-    pub fn new(f: F) -> Self
-    {
+    pub fn new(f: F) -> Self {
         Self::Empty(f)
     }
 
     /// Adds an error into the stash.
     #[track_caller]
     pub fn push<E>(&mut self, err: E)
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         // We need to move out of `&mut self`
         // because we want to call `f()` which is `FnOnce()`.
@@ -203,7 +194,7 @@ where
             ErrorStash::WithErrors(mut stash) => {
                 stash.push(err);
                 stash
-            },
+            }
         };
 
         *self = ErrorStash::WithErrors(stash_with_errors);
@@ -220,8 +211,7 @@ where
     /// errs.push("First error");
     /// assert!(!errs.is_empty());
     /// ```
-    pub fn is_empty(&self) -> bool
-    {
+    pub fn is_empty(&self) -> bool {
         match self {
             ErrorStash::Empty(_) => true,
             ErrorStash::WithErrors(_) => false,
@@ -249,8 +239,7 @@ where
     /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
     /// storing another level of errors.
     /// Such transitive childs will _not_ be returned from this method.
-    pub fn errors(&self) -> &[I]
-    {
+    pub fn errors(&self) -> &[I] {
         match self {
             ErrorStash::Empty(_) => &[],
             ErrorStash::WithErrors(stash) => stash.errors(),
@@ -275,8 +264,7 @@ where
     /// fn configure(
     ///     path_to_config_a: &str,
     ///     path_to_config_b: &str,
-    /// ) -> Result<HashMap<String, String>>
-    /// {
+    /// ) -> Result<HashMap<String, String>> {
     ///     let mut errs = ErrorStash::new(|| "Invalid app config");
     ///
     ///     let config_a = parse_config(path_to_config_a)
@@ -296,8 +284,7 @@ where
     ///     Ok(try2!(merge(config_a, config_b).or_stash(&mut errs)))
     /// }
     ///
-    /// fn parse_config(path: &str) -> Result<HashMap<String, String>>
-    /// {
+    /// fn parse_config(path: &str) -> Result<HashMap<String, String>> {
     ///     if path == "bad.cfg" {
     ///         Err(err!("Config file contains an error"))
     ///     } else {
@@ -309,8 +296,7 @@ where
     /// fn merge(
     ///     _a: HashMap<String, String>,
     ///     _b: HashMap<String, String>,
-    /// ) -> Result<HashMap<String, String>>
-    /// {
+    /// ) -> Result<HashMap<String, String>> {
     ///     // ...
     ///     Ok(HashMap::new())
     /// }
@@ -340,8 +326,7 @@ where
     /// [`StashedErrors`]: crate::StashedErrors
     /// [`ok`]: Self::ok
     /// [`try2!`]: crate::try2!
-    pub fn ok(&mut self) -> StashedResult<(), I>
-    {
+    pub fn ok(&mut self) -> StashedResult<(), I> {
         match self {
             ErrorStash::Empty(_) => StashedResult::Ok(()),
             ErrorStash::WithErrors(errs) => StashedResult::Err(errs),
@@ -362,8 +347,7 @@ where
     /// # use core::str::FromStr;
     /// use lazy_errors::{prelude::*, Result};
     ///
-    /// fn count_numbers(nums: &[&str]) -> Result<usize>
-    /// {
+    /// fn count_numbers(nums: &[&str]) -> Result<usize> {
     ///     let mut errs = ErrorStash::new(|| "Something wasn't a number");
     ///
     ///     for n in nums {
@@ -387,14 +371,12 @@ where
     ///
     /// [`ErrorData::Stashed`]: crate::ErrorData::Stashed
     /// [`StashedErrors`]: crate::StashedErrors
-    pub fn into_result(self) -> Result<(), Error<I>>
-    {
+    pub fn into_result(self) -> Result<(), Error<I>> {
         self.into()
     }
 }
 
-impl<I> StashWithErrors<I>
-{
+impl<I> StashWithErrors<I> {
     /// Creates a [`StashWithErrors`] that contains a single error so far;
     /// that error and errors added in the future are summarized by
     /// the supplied message.
@@ -414,7 +396,8 @@ impl<I> StashWithErrors<I>
     /// Adds an error into the stash.
     #[track_caller]
     pub fn push<E>(&mut self, err: E)
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         self.errors.push(err.into());
         self.locations.push(error::location());
@@ -429,8 +412,7 @@ impl<I> StashWithErrors<I>
     /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
     /// storing another level of errors.
     /// Such transitive childs will _not_ be returned from this method.
-    pub fn errors(&self) -> &[I]
-    {
+    pub fn errors(&self) -> &[I] {
         &self.errors
     }
 
@@ -450,8 +432,7 @@ impl<I> StashWithErrors<I>
     ///
     /// [`try2!`]: crate::try2!
     #[doc(hidden)]
-    pub fn take(&mut self) -> Self
-    {
+    pub fn take(&mut self) -> Self {
         // The dummy we'll be swapping into `self` should never “leak”,
         // if this type is used correctly.
         // But better print a specific error message in case it does.
@@ -471,28 +452,24 @@ impl<I> StashWithErrors<I>
 fn display<I>(
     f: &mut alloc::fmt::Formatter<'_>,
     errors: &[I],
-) -> alloc::fmt::Result
-{
+) -> alloc::fmt::Result {
     let count = errors.len();
     write!(f, "Stash of {count} errors currently")
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use crate::prelude::*;
 
     #[test]
-    fn stash_debug_fmt_when_empty()
-    {
+    fn stash_debug_fmt_when_empty() {
         let errs = ErrorStash::new(|| "Mock message");
 
         assert_eq!(format!("{errs:?}"), "ErrorStash(Empty)");
     }
 
     #[test]
-    fn stash_debug_fmt_with_errors()
-    {
+    fn stash_debug_fmt_with_errors() {
         let mut errs = ErrorStash::new(|| "Mock message");
         errs.push("First error");
         errs.push(Error::from_message("Second error"));

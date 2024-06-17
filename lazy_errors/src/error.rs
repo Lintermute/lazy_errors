@@ -138,8 +138,7 @@ pub struct Error<I>(pub Box<ErrorData<I>>);
 /// or wrap that other error. This enum distinguishes these three cases.
 /// You can thus return `Result<_, ErrorData>` in all of these cases.
 #[derive(Debug)]
-pub enum ErrorData<I>
-{
+pub enum ErrorData<I> {
     Stashed(StashedErrors<I>),
     Wrapped(WrappedError<I>),
     AdHoc(AdHocError),
@@ -158,8 +157,7 @@ pub enum ErrorData<I>
 /// [`StashWithErrors`]: crate::StashWithErrors
 /// [`or_create_stash`]: crate::OrCreateStash::or_create_stash
 #[derive(Debug)]
-pub struct StashedErrors<I>
-{
+pub struct StashedErrors<I> {
     /// Summarizes all errors in the list.
     summary: Box<str>,
 
@@ -238,8 +236,7 @@ pub struct StashedErrors<I>
 /// [`or_wrap`]: crate::OrWrap::or_wrap
 /// [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
 #[derive(Debug)]
-pub struct WrappedError<I>
-{
+pub struct WrappedError<I> {
     context:  Option<Box<str>>,
     inner:    I,
     location: Location,
@@ -267,83 +264,60 @@ pub struct WrappedError<I>
 ///     at lazy_errors/src/error.rs:1234:56"});
 /// ```
 #[derive(Debug)]
-pub struct AdHocError
-{
+pub struct AdHocError {
     message:  Box<str>,
     location: Location,
 }
 
-impl<I> From<ErrorData<I>> for Error<I>
-{
-    fn from(value: ErrorData<I>) -> Self
-    {
+impl<I> From<ErrorData<I>> for Error<I> {
+    fn from(value: ErrorData<I>) -> Self {
         Self(Box::new(value))
     }
 }
 
-impl<I> Deref for Error<I>
-{
+impl<I> Deref for Error<I> {
     type Target = ErrorData<I>;
 
-    fn deref(&self) -> &Self::Target
-    {
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<I> AsRef<ErrorData<I>> for Error<I>
-{
-    fn as_ref(&self) -> &ErrorData<I>
-    {
+impl<I> AsRef<ErrorData<I>> for Error<I> {
+    fn as_ref(&self) -> &ErrorData<I> {
         self.deref()
     }
 }
 
-impl<I> From<Error<I>> for ErrorData<I>
-{
-    fn from(value: Error<I>) -> Self
-    {
+impl<I> From<Error<I>> for ErrorData<I> {
+    fn from(value: Error<I>) -> Self {
         *value.0
     }
 }
 
 #[cfg(feature = "std")]
-impl<I: Display + Debug> std::error::Error for Error<I>
-{
-}
+impl<I: Display + Debug> std::error::Error for Error<I> {}
 
 #[cfg(feature = "std")]
-impl<I: Display + Debug> std::error::Error for ErrorData<I>
-{
-}
+impl<I: Display + Debug> std::error::Error for ErrorData<I> {}
 
 #[cfg(feature = "std")]
-impl<I: Display + Debug> std::error::Error for StashedErrors<I>
-{
-}
+impl<I: Display + Debug> std::error::Error for StashedErrors<I> {}
 
 #[cfg(feature = "std")]
-impl<I: Display + Debug> std::error::Error for WrappedError<I>
-{
-}
+impl<I: Display + Debug> std::error::Error for WrappedError<I> {}
 
 #[cfg(feature = "std")]
-impl std::error::Error for AdHocError
-{
-}
+impl std::error::Error for AdHocError {}
 
-impl<I: Display> Display for Error<I>
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
+impl<I: Display> Display for Error<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Display::fmt(&self.0, f)
     }
 }
 
-impl<I: Display> Display for ErrorData<I>
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
+impl<I: Display> Display for ErrorData<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let i: &dyn Display = match self {
             Self::AdHoc(err) => err,
             Self::Stashed(errs) => errs,
@@ -359,8 +333,7 @@ impl<I: Display> Display for ErrorData<I>
     }
 }
 
-impl<I: Display> Display for StashedErrors<I>
-{
+impl<I: Display> Display for StashedErrors<I> {
     /// Without additional flags, the output will be kept to a single line.
     /// To print the output as a list, pass the `#` “pretty-printing” sign.
     /// Doing so will also add source location information:
@@ -396,22 +369,19 @@ impl<I: Display> Display for StashedErrors<I>
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// use lazy_errors::prelude::*;
     ///
-    /// fn run() -> Result<(), Error>
-    /// {
+    /// fn run() -> Result<(), Error> {
     ///     let mut stash = ErrorStash::new(|| "Parent failed");
     ///     stash.push(parent().unwrap_err());
     ///     stash.into()
     /// }
     ///
-    /// fn parent() -> Result<(), Error>
-    /// {
+    /// fn parent() -> Result<(), Error> {
     ///     let mut stash = ErrorStash::new(|| "Child failed");
     ///     stash.push(child().unwrap_err());
     ///     stash.into()
     /// }
     ///
-    /// fn child() -> Result<(), &'static str>
-    /// {
+    /// fn child() -> Result<(), &'static str> {
     ///     Err("Root cause")
     /// }
     ///
@@ -428,8 +398,7 @@ impl<I: Display> Display for StashedErrors<I>
     ///         at lazy_errors/src/error.rs:1234:56
     ///       at lazy_errors/src/error.rs:1234:56"});
     /// ```
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         // TODO: Limit recursion depth for multiple sequences of
         // “groups” that each only consist of a single element.
         // Downcasting requires `'a: 'static`. Find an alternative.
@@ -454,19 +423,17 @@ impl<I: Display> Display for StashedErrors<I>
             ([e], _, false) => write!(f, "{summary}: {e}"),
             (errs, _, false) => {
                 write!(f, "{summary} ({} errors)", errs.len())
-            },
+            }
             (errs, locs, true) => {
                 write!(f, "{summary}")?;
                 display_list_of_childs(f, errs, locs)
-            },
+            }
         }
     }
 }
 
-impl<I: Display> Display for WrappedError<I>
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
+impl<I: Display> Display for WrappedError<I> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let err = &self.inner;
         let loc = self.location;
         let is_pretty = f.alternate(); // `#` in format string
@@ -481,24 +448,22 @@ impl<I: Display> Display for WrappedError<I>
                 // we'd end up with duplicate locations. This is fine
                 // as long as we're printing one location per line.
                 display_location(f, "", loc)
-            },
+            }
             (Some(context), false) => {
                 // Refer to the note about recursion depth in `StashedErrors`.
                 write!(f, "{context}: {err}")
-            },
+            }
             (Some(context), true) => {
                 // Refer to the note about recursion depth in `StashedErrors`.
                 write!(f, "{context}: {err:#}")?;
                 display_location(f, "", loc)
-            },
+            }
         }
     }
 }
 
-impl Display for AdHocError
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
+impl Display for AdHocError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let is_pretty = f.alternate(); // `#` in format string
         if !is_pretty {
             write!(f, "{}", self.message)
@@ -509,12 +474,10 @@ impl Display for AdHocError
     }
 }
 
-impl<I> Error<I>
-{
+impl<I> Error<I> {
     /// Creates an [`AdHocError`] variant of [`Error`] from a message.
     #[track_caller]
-    pub fn from_message<M: Display>(msg: M) -> Self
-    {
+    pub fn from_message<M: Display>(msg: M) -> Self {
         ErrorData::from_message(msg).into()
     }
 
@@ -533,7 +496,8 @@ impl<I> Error<I>
     /// [_inner error type_ `I`](Error#inner-error-type-i).
     #[track_caller]
     pub fn wrap<E>(err: E) -> Self
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         ErrorData::wrap(err).into()
     }
@@ -552,12 +516,10 @@ impl<I> Error<I>
     }
 }
 
-impl<I> ErrorData<I>
-{
+impl<I> ErrorData<I> {
     /// Creates an [`AdHocError`] variant of [`Error`] from a message.
     #[track_caller]
-    pub fn from_message<M: Display>(msg: M) -> Self
-    {
+    pub fn from_message<M: Display>(msg: M) -> Self {
         let err = AdHocError::from_message(msg.to_string());
         Self::AdHoc(err)
     }
@@ -578,7 +540,8 @@ impl<I> ErrorData<I>
     /// [_inner error type_ `I`](Error#inner-error-type-i).
     #[track_caller]
     pub fn wrap<E>(err: E) -> Self
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         Self::Wrapped(WrappedError::wrap(err))
     }
@@ -626,8 +589,7 @@ impl<I> ErrorData<I>
     /// i.e. `Box<dyn ...>`. Each of those childs may be an [`Error`]
     /// as well and have multiple childs itself. These transitive childs
     /// will _not_ be returned from this method.
-    pub fn childs(&self) -> &[I]
-    {
+    pub fn childs(&self) -> &[I] {
         match self {
             Self::AdHoc(_) => &[],
             Self::Wrapped(err) => core::slice::from_ref(err.inner()),
@@ -636,8 +598,7 @@ impl<I> ErrorData<I>
     }
 }
 
-impl<I> StashedErrors<I>
-{
+impl<I> StashedErrors<I> {
     pub fn from<M, E, L>(summary: M, errors: E, locations: L) -> Self
     where
         M: Display,
@@ -651,20 +612,19 @@ impl<I> StashedErrors<I>
         }
     }
 
-    pub fn errors(&self) -> &[I]
-    {
+    pub fn errors(&self) -> &[I] {
         &self.errors
     }
 }
 
-impl<I> WrappedError<I>
-{
+impl<I> WrappedError<I> {
     /// Creates a [`WrappedError`]
     /// from something that can be turned into an
     /// [_inner error type_ `I`](Error#inner-error-type-i).
     #[track_caller]
     pub fn wrap<E>(err: E) -> Self
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         Self {
             context:  None,
@@ -691,18 +651,15 @@ impl<I> WrappedError<I>
     }
 
     /// Return the error that was wrapped.
-    pub fn inner(&self) -> &I
-    {
+    pub fn inner(&self) -> &I {
         &self.inner
     }
 }
 
-impl AdHocError
-{
+impl AdHocError {
     /// Creates an [`AdHocError`] from a message.
     #[track_caller]
-    pub fn from_message<M: Display>(msg: M) -> Self
-    {
+    pub fn from_message<M: Display>(msg: M) -> Self {
         Self {
             message:  msg.to_string().into_boxed_str(),
             location: location(),
@@ -711,8 +668,7 @@ impl AdHocError
 }
 
 #[track_caller]
-pub fn location() -> Location
-{
+pub fn location() -> Location {
     core::panic::Location::caller()
 }
 
@@ -720,8 +676,7 @@ fn display_list_of_childs<I: Display>(
     f: &mut core::fmt::Formatter<'_>,
     errs: &[I],
     locs: &[Location],
-) -> core::fmt::Result
-{
+) -> core::fmt::Result {
     for (e, l) in errs.iter().zip(locs) {
         display_multiline(f, &e)?;
         display_location(f, "  ", l)?;
@@ -732,8 +687,7 @@ fn display_list_of_childs<I: Display>(
 fn display_multiline<I: Display>(
     f: &mut core::fmt::Formatter<'_>,
     err: &I,
-) -> core::fmt::Result
-{
+) -> core::fmt::Result {
     let mut prefix = "- ";
     for line in format!("{err:#}").lines() {
         writeln!(f)?;
@@ -747,28 +701,24 @@ fn display_location(
     f: &mut core::fmt::Formatter<'_>,
     indent: &str,
     location: Location,
-) -> core::fmt::Result
-{
+) -> core::fmt::Result {
     writeln!(f)?;
     write!(f, "{indent}at {location}")
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use core::mem::size_of;
 
     use super::*;
     use crate::prelude::Stashable; // The common use-case
 
     #[test]
-    fn error_is_small()
-    {
+    fn error_is_small() {
         assert_small::<Error<Stashable>>();
     }
 
-    fn assert_small<T>()
-    {
+    fn assert_small<T>() {
         assert_eq!(size_of::<T>(), size_of::<usize>());
     }
 }
