@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+## [`v0.5.0`] (2024-06-11)
+
 ### Breaking Changes
 
 - Hide the doctest line number helper better
@@ -53,6 +55,7 @@ This file documents all changes affecting the [semver] version of this project.
 
 - Initial release
 
+[`v0.5.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.5.0
 [`v0.4.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.4.0
 [`v0.3.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.3.0
 [`v0.2.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.2.0
