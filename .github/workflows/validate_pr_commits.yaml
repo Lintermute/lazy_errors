@@ -10,7 +10,7 @@
 # - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
 # - github.ref_name → $branch_name, resp. $pr_id/merge
 # - github.head_ref → $source_branch_name, e.g. "feature/foobar"
-# - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
+# - github.base_ref → $destination_branch, e.g. "main"
 
 name: Validate each commit
 
