@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         system: [ ubuntu-latest, windows-latest, macos-latest ]
-        branch: [ dev/0.1 ]
+        branch: [ main ]
 
     steps:
 

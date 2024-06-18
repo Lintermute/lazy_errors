@@ -10,7 +10,7 @@
 # - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
 # - github.ref_name → $branch_name, resp. $pr_id/merge
 # - github.head_ref → $source_branch_name, e.g. "feature/foobar"
-# - github.base_ref → $destination_branch, e.g. "dev/0.1" or "main"
+# - github.base_ref → $destination_branch, e.g. "main"
 
 name: Validate each commit
 
@@ -21,18 +21,6 @@ on:
       - opened
       - synchronize
       - reopened
-
-    # Commits on `dev/*` have already been checked individually.
-    # Additionally, at the time of a release (i.e., when merging to `pub/*`),
-    # some checks might not work anymore. For example, clippy may have gotten
-    # new lints, or there may be a new versions of some dependency. Such an
-    # issue would be fixed on `dev/*` first. But even then, some of the
-    # thorough checks defined in this pipeline will fail for "old" commits
-    # on `dev/*`. Note that we still run `validate.yaml`, of course.
-    # That pipeline will check both the HEAD of the PR source branch,
-    # as well as what would be the result of the merging the PR to `pub/*`.
-    branches-ignore:
-      - 'pub/*'
 
 jobs:
 
