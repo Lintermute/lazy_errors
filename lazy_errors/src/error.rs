@@ -457,7 +457,7 @@ impl<I: Display> Display for StashedErrors<I>
             },
             (errs, locs, true) => {
                 write!(f, "{summary}")?;
-                display_list_of_childs(f, errs, locs)
+                display_list_of_children(f, errs, locs)
             },
         }
     }
@@ -596,16 +596,24 @@ impl<I> ErrorData<I>
         Self::Wrapped(WrappedError::wrap_with(err, msg))
     }
 
+    /// Deprecated method that was renamed to
+    /// [`children`](Self::children).
+    #[deprecated(since = "0.6.0", note = "renamed to `children`")]
+    pub fn childs(&self) -> &[I]
+    {
+        self.children()
+    }
+
     /// Returns all errors that are direct children of this error.
     ///
     /// ```
     /// use lazy_errors::prelude::*;
     ///
     /// let err = Error::from_message("Something went wrong");
-    /// assert!(err.childs().is_empty());
+    /// assert!(err.children().is_empty());
     ///
     /// let err = Error::wrap("A thing went wrong");
-    /// let [e] = err.childs() else { unreachable!() };
+    /// let [e] = err.children() else { unreachable!() };
     /// assert_eq!(&format!("{e}"), "A thing went wrong");
     ///
     /// let mut err = ErrorStash::new(|| "One or more things went wrong");
@@ -613,20 +621,20 @@ impl<I> ErrorData<I>
     /// err.push("Another error");
     /// let r: Result<(), Error> = err.into();
     /// let err = r.unwrap_err();
-    /// let [e1, e2] = err.childs() else {
+    /// let [e1, e2] = err.children() else {
     ///     unreachable!()
     /// };
     /// assert_eq!(&format!("{e1}"), "An error");
     /// assert_eq!(&format!("{e2}"), "Another error");
     /// ```
     ///
-    /// Note that this method only returns _direct_ childs.
+    /// Note that this method only returns _direct_ children.
     /// When you're using [`prelude::Error`](crate::prelude::Error),
     /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
-    /// i.e. `Box<dyn ...>`. Each of those childs may be an [`Error`]
-    /// as well and have multiple childs itself. These transitive childs
+    /// i.e. `Box<dyn ...>`. Each of those children may be an [`Error`]
+    /// as well and have multiple children itself. These transitive children
     /// will _not_ be returned from this method.
-    pub fn childs(&self) -> &[I]
+    pub fn children(&self) -> &[I]
     {
         match self {
             Self::AdHoc(_) => &[],
@@ -716,7 +724,7 @@ pub fn location() -> Location
     core::panic::Location::caller()
 }
 
-fn display_list_of_childs<I: Display>(
+fn display_list_of_children<I: Display>(
     f: &mut core::fmt::Formatter<'_>,
     errs: &[I],
     locs: &[Location],

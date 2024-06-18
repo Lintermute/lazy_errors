@@ -248,7 +248,7 @@ where
     /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
     /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
     /// storing another level of errors.
-    /// Such transitive childs will _not_ be returned from this method.
+    /// Such transitive children will _not_ be returned from this method.
     pub fn errors(&self) -> &[I]
     {
         match self {
@@ -316,10 +316,10 @@ where
     /// }
     ///
     /// let err = configure("bad.cfg", "bad.cfg").unwrap_err();
-    /// assert_eq!(err.childs().len(), 2);
+    /// assert_eq!(err.children().len(), 2);
     ///
     /// let err = configure("good.cfg", "bad.cfg").unwrap_err();
-    /// assert_eq!(err.childs().len(), 1);
+    /// assert_eq!(err.children().len(), 1);
     ///
     /// assert!(configure("good.cfg", "good.cfg").is_ok());
     /// ```
@@ -428,7 +428,7 @@ impl<I> StashWithErrors<I>
     /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
     /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
     /// storing another level of errors.
-    /// Such transitive childs will _not_ be returned from this method.
+    /// Such transitive children will _not_ be returned from this method.
     pub fn errors(&self) -> &[I]
     {
         &self.errors
