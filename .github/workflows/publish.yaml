@@ -1,3 +1,24 @@
+# When a tag matching a certain pattern is pushed,
+# do a quick validation of the software at that point in the git history,
+# import the version number from the tag name and write it to Cargo.toml,
+# publish the crate to crates.io, and create a GitHub release.
+#
+# We're only doing a quick validation in this pipeline.
+# In the past we've called the `validate.yaml` from this pipeline.
+# However, this introduces a “race condition” with the rest of the
+# Rust ecosystem: `validate.yaml` checks several “moving targets”,
+# such as whether `Cargo.lock` is up-to-date. Thus, any commit
+# that had already passed the `validate.yaml` check may fail it
+# if it is checked again at some later point in time, for example
+# when a new version of any (transitive) dependency gets released.
+# Since we've validated each commit on the main branch,
+# all commits on the main branch are good to release per se.
+# If we rejected such a release just because we're a few minutes
+# “too late” (whatever that means), we would have to publish
+# that version manually or we would have to delete the git tag.
+# Even if we noticed before creating the tag, this would require
+# us to create a “hotfix” branch for completely artificial reasons.
+
 name: Publish
 
 on:
@@ -8,7 +29,35 @@ on:
 jobs:
 
   validate:
-    uses: ./.github/workflows/validate.yaml
+    timeout-minutes: 60
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+
+    # On some agents there are linter errors due to changed line endings.
+    - name: Configure Git
+      run: git config --global core.autocrlf false
+
+    - uses: actions/checkout@v4
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    # FIXME: `xtask ci` may run `cargo build`, overwriting its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Run `xtask ci all --skip-moving-targets`
+      run: |
+        cargo install --path xtask
+        xtask ci all --skip-moving-targets
 
   publish:
     needs: validate
