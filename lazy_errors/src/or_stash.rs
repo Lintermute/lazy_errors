@@ -204,7 +204,7 @@ impl<'s, T, E> StashedResult<'s, T, E>
     /// assert_eq!(
     ///     parse_version("42", "-1")
     ///         .unwrap_err()
-    ///         .childs()
+    ///         .children()
     ///         .len(),
     ///     1
     /// );
@@ -212,7 +212,7 @@ impl<'s, T, E> StashedResult<'s, T, E>
     /// assert_eq!(
     ///     parse_version("-1", "-1")
     ///         .unwrap_err()
-    ///         .childs()
+    ///         .children()
     ///         .len(),
     ///     2
     /// );

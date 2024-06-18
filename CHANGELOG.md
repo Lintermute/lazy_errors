@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Added
+
+- Add `ErrorData::children` and mark `ErrorData::childs` as deprecated
+
 ## [`v0.5.0`] (2024-06-11)
 
 ### Breaking Changes

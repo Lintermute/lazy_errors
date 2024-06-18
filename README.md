@@ -35,8 +35,8 @@ fn run(input1: &str, input2: &str) -> Result<()>
 fn main()
 {
     let err = run("❓", "❗").unwrap_err();
-    let n = err.childs().len();
-    eprintln!("Got {n} error(s).");
+    let n = err.children().len();
+    eprintln!("Got an error with {n} children.");
     eprintln!("---------------------------------------------------------");
     eprintln!("{err:#}");
 }
@@ -45,7 +45,7 @@ fn main()
 Running the example will print:
 
 ```text
-Got 3 error(s).
+Got an error with 3 children.
 ---------------------------------------------------------
 There were one or more errors
 - invalid digit found in string
@@ -582,7 +582,7 @@ fn handle_parser_errors(errs: &ParserError) -> Result<()>
 {
     println!("Step #2: Starting...");
 
-    for e in errs.childs() {
+    for e in errs.children() {
         match e {
             CustomError::NotU32(input) => guess_hex(input)?,
             other => return Err(err!("Internal error: {other}")),
