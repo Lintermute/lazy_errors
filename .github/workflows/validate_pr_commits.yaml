@@ -22,18 +22,6 @@ on:
       - synchronize
       - reopened
 
-    # Commits on `dev/*` have already been checked individually.
-    # Additionally, at the time of a release (i.e., when merging to `pub/*`),
-    # some checks might not work anymore. For example, clippy may have gotten
-    # new lints, or there may be a new versions of some dependency. Such an
-    # issue would be fixed on `dev/*` first. But even then, some of the
-    # thorough checks defined in this pipeline will fail for "old" commits
-    # on `dev/*`. Note that we still run `validate.yaml`, of course.
-    # That pipeline will check both the HEAD of the PR source branch,
-    # as well as what would be the result of the merging the PR to `pub/*`.
-    branches-ignore:
-      - 'pub/*'
-
 jobs:
 
   rustfmt:
