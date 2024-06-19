@@ -19,7 +19,7 @@ use core::str;
 use std::process::{self, ExitCode, Stdio};
 
 use ci::Ci;
-use lazy_errors::{prelude::*, try2, Result};
+use lazy_errors::{prelude::*, Result};
 use version::Version;
 
 type CommandLine = Vec<&'static str>;

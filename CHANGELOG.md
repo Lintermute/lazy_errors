@@ -7,6 +7,7 @@ This file documents all changes affecting the [semver] version of this project.
 ### Added
 
 - Add `ErrorData::children` and mark `ErrorData::childs` as deprecated
+- Add the `try2!` macro to the prelude
 
 ## [`v0.5.0`] (2024-06-11)
 

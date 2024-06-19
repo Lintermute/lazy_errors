@@ -1,6 +1,6 @@
 use std::{fmt::Display, str::FromStr};
 
-use lazy_errors::{prelude::*, try2, Result};
+use lazy_errors::{prelude::*, Result};
 
 #[derive(clap::Subcommand, Debug, Clone, PartialEq, Hash, Eq)]
 pub enum Version
