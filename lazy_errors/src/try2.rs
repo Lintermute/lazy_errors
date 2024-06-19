@@ -3,7 +3,7 @@
 /// The [`try2!`] macro works well with [`or_stash`] and [`ErrorStash::ok`]:
 ///
 /// ```
-/// use lazy_errors::{prelude::*, try2, Result};
+/// use lazy_errors::{prelude::*, Result};
 /// # use core::str::FromStr;
 ///
 /// fn parse_version(s: &str) -> Result<(u32, u32)>

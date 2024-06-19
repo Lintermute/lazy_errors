@@ -6,7 +6,7 @@ and defer error handling ergonomically.
 ```rust
 use core::str::FromStr;
 
-use lazy_errors::{prelude::*, try2, Result};
+use lazy_errors::{prelude::*, Result};
 
 fn run(input1: &str, input2: &str) -> Result<()>
 {

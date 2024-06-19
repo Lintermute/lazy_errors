@@ -14,6 +14,7 @@ pub use crate::reportable::Reportable;
 pub use crate::{
     boxed::*,
     err,
+    try2,
     OrCreateStash,
     OrStash,
     OrWrap,

@@ -267,7 +267,7 @@ where
     /// ```
     /// use std::collections::HashMap;
     ///
-    /// use lazy_errors::{prelude::*, try2, Result};
+    /// use lazy_errors::{prelude::*, Result};
     ///
     /// // Always parses two configs, even if the first one contains an error.
     /// // All errors or groups of errors returned from this function
