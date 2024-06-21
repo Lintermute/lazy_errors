@@ -1,5 +1,12 @@
 //! Exports traits and _aliased_ types to support the most common use-cases
-//! (when depending on `std`).
+//! (when `std` and/or `core::error::Error` is _not_ available).
+//!
+//! In `#![no_std]` builds, `std::error::Error` is not available.
+//! In Rust versions before 1.81, `core::error::Error` is not available.
+//! Otherwise, consider enabling the `std` feature
+//! which makes the `lazy_errors::prelude::*` available.
+//! Types exported from the “regular” prelude
+//! have better intercompatibility with other crates.
 //!
 //! When using any container from `lazy_errors`, such as [`lazy_errors::Error`]
 //! or [`lazy_errors::ErrorStash`], you usually don't want to specify the
@@ -10,12 +17,18 @@
 //! “just bail out now (or later)” use case.
 //!
 //! Usually, anything that you want to treat as an error can be boxed
-//! into a [`lazy_errors::Stashable`].
+//! into a `lazy_errors::Stashable`.
+//! When you don't want to introduce a dependency on `std`
+//! (or when `core::error::Error` is not available),
+//! you need an alternative to `lazy_errors::Stashable`.
+//! [`Reportable`] is a surrogate for `std::error::Error`/`core::error::Error`.
+//! [`lazy_errors::surrogate_error_trait::Stashable`] is for
+//! [`Reportable`] what `Stashable` is for `std::error::Error`.
 //! Also, using the `'static` bound for the trait object usually works fine.
-//! Thus, `Stashable<'static>` is the [_inner error type_ `I`]
-//! for all container type aliases exported by this prelude.
-//! We also define and export [`Stashable`] as an alias for
-//! `Stashable<'static>` for readability, ergonomics, and maintainability.
+//! Thus, `Stashable<'static>` is the [_inner error type_ `I`] for all
+//! container type aliases exported by this prelude. We also define and export
+//! [`Stashable`] as an alias for `Stashable<'static>` for
+//! readability, ergonomics, and maintainability.
 //!
 //! If you want to use different inner error types, you can go ahead and use
 //! the container and wrapper types from this library directly. In that case,
@@ -23,7 +36,9 @@
 //!
 //! [`lazy_errors::Error`]: crate::Error
 //! [`lazy_errors::ErrorStash`]: crate::ErrorStash
-//! [`lazy_errors::Stashable`]: crate::Stashable
+//! [`lazy_errors::surrogate_error_trait::Stashable`]:
+//! crate::surrogate_error_trait::Stashable
+//! [`Reportable`]: crate::surrogate_error_trait::Reportable
 //! [_inner error type_ `I`]: crate::Error#inner-error-type-i
 //! [CUSTOM]: crate#example-custom-error-types
 
@@ -36,9 +51,6 @@ pub use crate::{
     OrWrapWith,
     StashedResult,
 };
-
-#[cfg(feature = "eyre")]
-pub use crate::{IntoEyreReport, IntoEyreResult};
 
 /// Type alias for [`crate::ErrorStash`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
@@ -71,11 +83,11 @@ pub type StashedErrors = crate::StashedErrors<Stashable>;
 pub type WrappedError = crate::WrappedError<Stashable>;
 
 /// Type alias for [`crate::AdHocError`] to get access to all error types by
-/// importing [`lazy_errors::prelude::*`](module@self).
+/// importing [`lazy_errors::surrogate_error_trait::prelude::*`](module@self).
 pub type AdHocError = crate::AdHocError;
 
-/// Type alias for [`crate::Stashable`]
+/// Type alias for [`super::Stashable`]
 /// to use a `'static` bound for the boxed
 /// [_inner error type_ `I`](crate::Error#inner-error-type-i) trait object,
 /// as explained in [the module documentation](module@self).
-pub type Stashable = crate::Stashable<'static>;
+pub type Stashable = super::Stashable<'static>;

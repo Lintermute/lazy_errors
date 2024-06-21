@@ -9,7 +9,21 @@ use crate::{ErrorStash, StashWithErrors};
 /// Importing the trait is sufficient due to blanket implementations.
 /// The trait is implemented on `Result<_, E>` if `E` implements `Into<I>`,
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
-/// typically [`Stashable`](crate::prelude::Stashable).
+/// typically [`prelude::Stashable`].
+#[cfg_attr(
+    feature = "std",
+    doc = r##"
+
+[`prelude::Stashable`]: crate::prelude::Stashable
+"##
+)]
+#[cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
+"##
+)]
 pub trait OrStash<S, I, T>
 {
     /// If `self` is `Result::Ok(value)`,
@@ -18,8 +32,9 @@ pub trait OrStash<S, I, T>
     /// adds `e` to the provided [`ErrorStash`] or [`StashWithErrors`]
     /// and returns the `Err` variant [`StashedResult`].
     ///
-    /// Used to collect an arbitrary number of `Result::Err` occurrences
-    /// in an [`ErrorStash`] or a [`StashWithErrors`] list,
+    /// Use this method to collect an arbitrary number
+    /// of `Result::Err` occurrences
+    /// in an [`ErrorStash`] or a [`StashWithErrors`],
     /// deferring error handling to some later point in time,
     /// for example until additional `Err`s or have been collected
     /// or until some cleanup logic has been executed.
@@ -30,36 +45,18 @@ pub trait OrStash<S, I, T>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
-    ///     let err = run().unwrap_err();
-    ///     let printed = format!("{err:#}");
-    ///     let printed = replace_line_numbers(&printed);
-    ///     assert_eq!(printed, indoc::indoc! {"
-    ///         Failed to run application
-    ///         - Input is not ASCII: '🙈'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///         - Input is not ASCII: '🙉'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///         - Input is not ASCII: '🙊'
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///         - Cleanup failed
-    ///           at lazy_errors/src/or_stash.rs:1234:56
-    ///           at lazy_errors/src/or_stash.rs:1234:56"});
-    /// }
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run() -> Result<(), Error>
     /// {
     ///     let mut stash = ErrorStash::new(|| "Failed to run application");
     ///
-    ///     print_if_ascii("🙈").or_stash(&mut stash);
-    ///     print_if_ascii("🙉").or_stash(&mut stash);
-    ///     print_if_ascii("🙊").or_stash(&mut stash);
+    ///     print_if_ascii("❓").or_stash(&mut stash);
+    ///     print_if_ascii("❗").or_stash(&mut stash);
     ///     print_if_ascii("42").or_stash(&mut stash);
     ///
     ///     cleanup().or_stash(&mut stash); // Runs regardless of errors
@@ -81,6 +78,24 @@ pub trait OrStash<S, I, T>
     /// {
     ///     Err(err!("Cleanup failed"))
     /// }
+    ///
+    /// fn main()
+    /// {
+    ///     let err = run().unwrap_err();
+    ///     let printed = format!("{err:#}");
+    ///     let printed = replace_line_numbers(&printed);
+    ///     assert_eq!(printed, indoc::indoc! {"
+    ///         Failed to run application
+    ///         - Input is not ASCII: '❓'
+    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///         - Input is not ASCII: '❗'
+    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///         - Cleanup failed
+    ///           at lazy_errors/src/or_stash.rs:1234:56
+    ///           at lazy_errors/src/or_stash.rs:1234:56"});
+    /// }
     /// ```
     ///
     /// The [`ErrorStash`] is created manually in the example above.
@@ -90,9 +105,10 @@ pub trait OrStash<S, I, T>
     /// `e` will be moved into the [`ErrorStash`]. As soon as there is
     /// at least one error stored in the [`ErrorStash`], converting it
     /// will yield `Result::Err(Error)`.
+    ///
     /// Sometimes you don't want to create an empty [`ErrorStash`] beforehand.
-    /// It's possible to create a non-empty container on-demand by using
-    /// [`or_create_stash`].
+    /// In that case you can call [`or_create_stash`] on `Result`
+    /// to create a non-empty container on-demand, whenever necessary.
     ///
     /// [`ErrorStash`]: crate::ErrorStash
     /// [`or_create_stash`]: crate::OrCreateStash::or_create_stash
@@ -100,23 +116,26 @@ pub trait OrStash<S, I, T>
 }
 
 /// Similar to [`core::result::Result`], except that this type
-/// is deliberately _not_ `#[must_use]` and
-/// the error type is hardcoded as [`StashWithErrors`].
+/// is deliberately _not_ `#[must_use]`
+/// and the `Err` type is more or less hardcoded.
 ///
-/// [`StashedResult`] is returned from [`or_stash`];
-/// there should be no need to create values of this type manually.
-/// Note that the [`StashWithErrors`] is kept as `&mut` and actually borrows
-/// the inner value from the `&mut` [`ErrorStash`] passed to [`or_stash`].
+/// Note that the error variant is [`&mut StashWithErrors`][StashWithErrors].
+/// When `StashedResult` is returned from [`or_stash`],
+/// it actually borrows the inner value from the [`&mut ErrorStash`][ErrorStash]
+/// that was passed to [`or_stash`].
 /// Thus, if you want to keep the results of multiple [`or_stash`] calls
 /// around at the same time, in order to extract their `Ok(t)` values later,
-/// you need to call [`StashedResult::ok()`] on them.
+/// you need to call [`StashedResult::ok`] on them.
 /// Otherwise you'll get ownership-related compilation errors.
-/// Check out [`or_stash`] for an example.
+/// Check out [`StashedResult::ok`] for an example.
 ///
 /// The reason we're keeping a reference to the [`StashWithErrors`] is
 /// that it allows you to use the [`try2!`] macro
 /// (and will probably allow you use the `?` operator in the future
 /// when the `Try` trait is stabilized).
+///
+/// `StashedResult` is returned from [`or_stash`].
+/// There should be no need to create values of this type manually.
 ///
 /// [`try2!`]: crate::try2!
 /// [`or_stash`]: OrStash::or_stash
@@ -170,15 +189,19 @@ impl<'s, T, E> StashedResult<'s, T, E>
     ///
     /// This method is useful to discard the `&mut` borrowing of the
     /// [`ErrorStash`]/[`StashWithErrors`] that was passed as parameter
-    /// to [`or_stash`](OrStash::or_stash).
-    /// You may need to do this if you have multiple `or_stash` statements
-    /// and want to extract the `Ok(T)` result from them later.
+    /// to [`or_stash`].
+    /// You may need to do this if you have multiple [`or_stash`] statements
+    /// and want to extract the `Ok(t)` result from them later.
     /// For example, the following example would fail to compile
     /// without calling `ok` (due to borrowing `errs` mutably twice):
     ///
     /// ```
     /// # use core::str::FromStr;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// fn parse_version(major: &str, minor: &str) -> Result<(u32, u32)>
     /// {
@@ -217,6 +240,8 @@ impl<'s, T, E> StashedResult<'s, T, E>
     ///     2
     /// );
     /// ```
+    ///
+    /// [`or_stash`]: OrStash::or_stash
     pub fn ok(self) -> Option<T>
     {
         match self {

@@ -7,7 +7,21 @@ use crate::Error;
 /// Importing the trait is sufficient due to blanket implementations.
 /// The trait is implemented on `Result<_, E>` if `E` implements `Into<I>`,
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
-/// typically [`Stashable`](crate::prelude::Stashable).
+/// typically [`prelude::Stashable`].
+#[cfg_attr(
+    feature = "std",
+    doc = r##"
+
+[`prelude::Stashable`]: crate::prelude::Stashable
+"##
+)]
+#[cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
+"##
+)]
 pub trait OrWrapWith<F, M, T, E>
 where
     F: FnOnce() -> M,
@@ -20,24 +34,16 @@ where
     /// and annotates it with the message provided by the user.
     ///
     /// This method behaves identically to [`or_wrap`]
-    /// except that it also sets an informative message about
-    /// the error context, as provided by the user.
+    /// except that you can pass some information
+    /// about the context of the error.
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
-    ///     assert!(run(&["foo", "bar"]).is_ok());
-    ///
-    ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
-    ///     let printed = format!("{err:#}");
-    ///     let printed = replace_line_numbers(&printed);
-    ///     assert_eq!(printed, indoc::indoc! {"
-    ///         Input is not ASCII: ❌
-    ///         at lazy_errors/src/or_wrap_with.rs:1234:56"});
-    /// }
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run(tokens: &[&str]) -> Result<(), Error>
     /// {
@@ -51,9 +57,21 @@ where
     ///         Some(not_ascii) => Err(not_ascii.to_string()),
     ///     }
     /// }
+    ///
+    /// fn main()
+    /// {
+    ///     assert!(run(&["foo", "bar"]).is_ok());
+    ///
+    ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
+    ///     let printed = format!("{err:#}");
+    ///     let printed = replace_line_numbers(&printed);
+    ///     assert_eq!(printed, indoc::indoc! {"
+    ///         Input is not ASCII: ❌
+    ///         at lazy_errors/src/or_wrap_with.rs:1234:56"});
+    /// }
     /// ```
     ///
-    /// Please take a look at [`or_wrap`] if you do not need to supply
+    /// Please take a look at [`or_wrap`] if you do not want to supply
     /// the informative message.
     ///
     /// [`WrappedError`]: crate::WrappedError

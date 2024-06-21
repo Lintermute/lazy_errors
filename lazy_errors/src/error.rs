@@ -1,17 +1,41 @@
-use alloc::{boxed::Box, format, string::ToString};
 use core::{
     fmt::{Debug, Display},
     ops::Deref,
 };
 
+use alloc::{boxed::Box, format, string::ToString};
+
 pub type Location = &'static core::panic::Location<'static>;
 
-/// The primary error type to use when using this crate:
-/// a `Box` containing an enum that wraps all kinds of errors
-/// that you may want to return from functions.
+/// The primary error type to use when using this crate.
 ///
-/// It's boxed to avoid introducing overhead on the
+/// [`Error`] is a [`Box`] that contains an [`ErrorData`] enum variant.
+/// The enum wraps all kinds of errors
+/// that you may want to return from functions.
+/// [`Error`] boxes that enum to avoid introducing overhead on the
 /// happy paths of functions returning `Result<_, Error>`.
+/// You can access the [`ErrorData`] variants
+/// in [`Error`] via [`Deref`], [`AsRef`], or [`From`]:
+///
+/// ```
+/// # use core::str::FromStr;
+/// #[cfg(feature = "std")]
+/// use lazy_errors::prelude::*;
+///
+/// #[cfg(not(feature = "std"))]
+/// use lazy_errors::surrogate_error_trait::prelude::*;
+///
+/// let err: Error = u32::from_str("").or_wrap().unwrap_err();
+///
+/// let deref: &ErrorData = &*err;
+/// let asref: &ErrorData = err.as_ref();
+/// let converted: ErrorData = err.into();
+///
+/// let err: WrappedError = match converted {
+///     ErrorData::Wrapped(err) => err,
+///     _ => unreachable!(),
+/// };
+/// ```
 ///
 /// ### Inner Error Type `I`
 ///
@@ -24,12 +48,13 @@ pub type Location = &'static core::panic::Location<'static>;
 ///
 /// #### `Stashable`: Boxed Errors
 ///
-/// Usually (if you're using the _aliased_ re-export of [`Error`]
-/// and other containers  from the [`crate::prelude`]), `I` is [`Stashable`].
-/// If the `std` feature is enabled, [`Stashable`] is an alias for
+/// Most of the time you will be using the _aliased_ re-export of [`Error`]
+/// and other containers from the [`prelude`].
+/// In that case, `I` will be [`prelude::Stashable`].
+/// If the `std` feature is enabled, `prelude::Stashable` is an alias for
 /// `Box<dyn std::error::Error + Send + Sync + 'static>`.
 /// This trait bound was chosen because
-/// `Into<Box<dyn std::error::Error + Send + Sync + 'static>>`.
+/// `Into<Box<dyn std::error::Error + Send + Sync + 'static>>`
 /// is implemented for many types via blanket implementations
 /// in `std` and crates such as `anyhow` or `eyre`.
 ///
@@ -37,90 +62,115 @@ pub type Location = &'static core::panic::Location<'static>;
 ///
 /// - `&str`
 /// - `String`
-/// - `eyre::Report`
 /// - `anyhow::Error`
+/// - `eyre::Report`
 /// - `std::error::Error`
 /// - All error types from this crate
 ///
-/// In `#![no_std]` builds, `std::error::Error` is not available,
-/// so we added [`Reportable`] as replacement and implemented it
-/// for error types in `core` and `alloc`, as well as for `&str` and `String`.
-/// In `#![no_std]` builds, [`Stashable`] is an alias for
-/// `Box<dyn Reportable + Send + 'static>`.
-/// The [`Send`] trait bound
+/// Additionally, this trait bound makes `Error<I>` satisfy
+/// `std::error::Error + Send + Sync + 'static` as well,
+/// so it can be consumed by other crates
+/// that support errors in general.
+///
+/// In `#![no_std]` builds, `std::error::Error` is not available.
+/// Without the `error_in_core` feature, [`core::error::Error`] isn't either.
+/// For these situations, `lazy_errors` comes with a surrogate error trait:
+/// [`Reportable`]. `lazy_errors` implements [`Reportable`]
+/// for error types in `core` and `alloc` as well as for `&str` and `String`.
+/// `lazy_errors` also defines
+/// [`surrogate_error_trait::prelude::Stashable`] as an alias for
+/// `Box<dyn Reportable + Send + 'static>`
+/// and exports additional type aliases in [`surrogate_error_trait::prelude`]
+/// that allow you to use `lazy_errors` in `std`/`no_std` modes in the same way,
+/// just by importing different preludes.
+///
+/// FYI, the [`Send`] trait bound
 /// [makes errors usable with `thread::spawn` and `task::spawn`][1].
 ///
 /// #### Using Custom Error Types
 ///
-/// Usually, the inner error type `I` is [`Stashable`].
-/// Nevertheless, the concrete type to use for `I` can be chosen
-/// by the user arbitrarily.
-/// It can be a custom type and does not need to implement any traits
-/// or auto traits except [`Sized`].
-/// While such error types are unsupported by `eyre`,
-/// this crate should be able to work with them:
+/// Usually, the inner error type `I` is [`prelude::Stashable`].
+/// Nevertheless, you can choose the specific type to use for `I` arbitrarily:
 ///
 /// ```
-/// # extern crate alloc;
 /// use lazy_errors::Error;
 ///
 /// struct CustomError;
 /// let error: Error<CustomError> = Error::wrap(CustomError);
+/// ```
 ///
+/// Note that you won't be able to print or debug-print errors
+/// if the inner error type does not implement [`Display`]/[`Debug`].
+/// On the other hand, such error types are completely unsupported by `eyre`:
+///
+/// ```compile_fail
+/// # use color_eyre::eyre;
+/// use eyre::Error;
+///
+/// struct CustomError;
+/// let error: Error = Error::new(CustomError);
+/// ```
+///
+/// `lazy_errors` should support any custom inner error type
+/// as long as it is [`Sized`].
+/// You can even choose a custom type to use for `I`
+/// that doesn't implement [`Send`] or [`Sync`]:
+///
+/// ```
+/// # extern crate alloc;
 /// use alloc::rc::Rc;
+/// use lazy_errors::Error;
+///
 /// struct NeitherSendNorSync(Rc<usize>);
 /// let inner = NeitherSendNorSync(Rc::new(42));
 /// let error: Error<NeitherSendNorSync> = Error::wrap(inner);
 /// ```
 ///
+/// Even if you implemented `Debug`, `Display`, and `std::error::Error`,
+/// `eyre` still won't support your custom error type if it isn't
+/// `Send + Sync + 'static`:
+///
+/// ```compile_fail
+/// # extern crate alloc;
+/// # use color_eyre::eyre;
+/// use alloc::rc::Rc;
+/// use eyre::eyre;
+///
+/// #[derive(Debug)]
+/// struct NeitherSendNorSync(Rc<usize>);
+///
+/// impl std::fmt::Display for NeitherSendNorSync
+/// {
+///     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+///     {
+///         let deref = &self.0;
+///         write!(f, "{deref}")
+///     }
+/// }
+///
+/// impl std::error::Error for NeitherSendNorSync {}
+///
+/// let inner = NeitherSendNorSync(Rc::new(42));
+/// let report = eyre!(inner);
+/// ```
+///
 /// [1]: https://github.com/dtolnay/anyhow/issues/81
-/// [`Stashable`]: crate::Stashable
 /// [`Reportable`]: crate::Reportable
+/// [`surrogate_error_trait::prelude`]: crate::surrogate_error_trait::prelude
+/// [`surrogate_error_trait::prelude::Stashable`]:
+/// crate::surrogate_error_trait::prelude::Stashable
 #[cfg_attr(
-    feature = "eyre",
+    feature = "std",
     doc = r##"
-
-```compile_fail
-# use color_eyre::eyre;
-use eyre::eyre;
-
-struct CustomError;
-let report = eyre!(CustomError);
-```
-
+[`prelude`]: crate::prelude
+[`prelude::Stashable`]: crate::prelude::Stashable
 "##
 )]
-/// If you implemented `Debug`, `Display`, and `std::error::Error`,
-/// you could use `CustomError` with `eyre` -- as long as the type
-/// satisfies `Send + Sync + 'static`:
 #[cfg_attr(
-    feature = "eyre",
+    not(feature = "std"),
     doc = r##"
-
-```compile_fail
-# extern crate alloc;
-# use color_eyre::eyre;
-use alloc::rc::Rc;
-use eyre::eyre;
-
-#[derive(Debug)]
-struct NeitherSendNorSync(Rc<usize>);
-
-impl std::fmt::Display for NeitherSendNorSync
-{
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-    {
-        let deref = &self.0;
-        write!(f, "{deref}")
-    }
-}
-
-impl std::error::Error for NeitherSendNorSync {}
-
-let inner = NeitherSendNorSync(Rc::new(42));
-let report = eyre!(inner);
-```
-
+[`prelude`]: crate::surrogate_error_trait::prelude
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
 "##
 )]
 #[derive(Debug)]
@@ -131,12 +181,14 @@ pub struct Error<I>(pub Box<ErrorData<I>>);
 ///
 /// The main reason to use this crate is to return an arbitrary number
 /// of errors from functions, i.e. `Result<_, StashedErrors>`,
-/// where [`StashedErrors`] is basically a `Vec<E>`. However, you may
-/// want to return some different error beforehand, for example when
-/// a guard clause evaluates to `false` or when a preliminary check
-/// evaluated to `Err`. In those cases, you can return an ad-hoc error
+/// where [`StashedErrors`] is basically a `Vec<E>`. At run-time,
+/// however, you may want to return some other error,
+/// for example when a guard clause evaluates to `false`
+/// or when a preliminary check evaluated to `Err`.
+/// In those cases, you can return an ad-hoc error
 /// or wrap that other error. This enum distinguishes these three cases.
-/// You can thus return `Result<_, ErrorData>` in all of these cases.
+/// Since [`Error`] transparently wraps [`ErrorData`],
+/// you can thus return `Result<_, Error>` in all of these cases.
 #[derive(Debug)]
 pub enum ErrorData<I>
 {
@@ -148,10 +200,13 @@ pub enum ErrorData<I>
 /// A list of one or more errors along with a message
 /// that summarizes all errors in the list.
 ///
-/// Values of this type get created by converting a (non-empty) [`ErrorStash`]
-/// into `Result`, or by converting a [`StashWithErrors`] into [`Error`].
+/// Most of the time this type is used only internally.
+///
+/// Values of this type get created (internally)
+/// by converting a (non-empty) [`ErrorStash`] into `Result`, or
+/// by converting a [`StashWithErrors`] into [`Error`].
 /// The error summary message will be set according to the parameter passed to
-/// [`ErrorStash::new`] respectively [`or_create_stash`];
+/// [`ErrorStash::new`] (or [`or_create_stash`], respectively).
 ///
 /// [`ErrorStash`]: crate::ErrorStash
 /// [`ErrorStash::new`]: crate::ErrorStash::new
@@ -175,64 +230,48 @@ pub struct StashedErrors<I>
 /// the context of the error.
 ///
 /// Most of the time this type is used only internally.
-/// Values of this type get created by [`or_wrap`] and [`or_wrap_with`]:
+///
+/// Values of this type get created internally
+/// by [`or_wrap`] and [`or_wrap_with`].
+/// `WrappedError` can wrap any value that can be converted into the
+/// [_inner error type_ `I`](Error#inner-error-type-i).
+///
+/// You can print and pretty-print the error,
+/// regardless of whether the optional context message is present or not:
 ///
 /// ```
 /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// # use core::str::FromStr;
+/// #[cfg(feature = "std")]
 /// use lazy_errors::prelude::*;
 ///
-/// let err: Error = u32::from_str("").or_wrap().unwrap_err();
+/// #[cfg(not(feature = "std"))]
+/// use lazy_errors::surrogate_error_trait::prelude::*;
 ///
-/// let printed = format!("{err}");
-/// assert_eq!(printed, "cannot parse integer from empty string");
+/// let err1: Error = u32::from_str("❌")
+///     .or_wrap()
+///     .unwrap_err();
 ///
-/// let printed = format!("{err:#}");
-/// let printed = replace_line_numbers(&printed);
-/// assert_eq!(printed, indoc::indoc! {"
-///     cannot parse integer from empty string
-///     at lazy_errors/src/error.rs:1234:56"});
-/// ```
-///
-/// ```
-/// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-/// # use core::str::FromStr;
-/// use lazy_errors::prelude::*;
-///
-/// let err: Error = u32::from_str("")
+/// let err2: Error = u32::from_str("❌")
 ///     .or_wrap_with(|| "Not an u32")
 ///     .unwrap_err();
 ///
-/// let printed = format!("{err}");
-/// assert_eq!(
-///     printed,
-///     "Not an u32: cannot parse integer from empty string"
-/// );
+/// let printed1 = format!("{err1}");
+/// let printed2 = format!("{err2}");
+/// assert_eq!(printed1, "invalid digit found in string");
+/// assert_eq!(printed2, "Not an u32: invalid digit found in string");
 ///
-/// let printed = format!("{err:#}");
-/// let printed = replace_line_numbers(&printed);
-/// assert_eq!(printed, indoc::indoc! {"
-///     Not an u32: cannot parse integer from empty string
+/// let printed1 = format!("{err1:#}");
+/// let printed1 = replace_line_numbers(&printed1);
+/// assert_eq!(printed1, indoc::indoc! {"
+///     invalid digit found in string
 ///     at lazy_errors/src/error.rs:1234:56"});
-/// ```
 ///
-/// You can then access the [`WrappedError`] in the [`Error`]
-/// via [`Deref`], [`AsRef`], or [`From`]:
-///
-/// ```
-/// # use core::str::FromStr;
-/// use lazy_errors::prelude::*;
-///
-/// let err: Error = u32::from_str("").or_wrap().unwrap_err();
-///
-/// let deref: &ErrorData = &*err;
-/// let asref: &ErrorData = err.as_ref();
-/// let converted: ErrorData = err.into();
-///
-/// let err: WrappedError = match converted {
-///     ErrorData::Wrapped(err) => err,
-///     _ => unreachable!(),
-/// };
+/// let printed2 = format!("{err2:#}");
+/// let printed2 = replace_line_numbers(&printed2);
+/// assert_eq!(printed2, indoc::indoc! {"
+///     Not an u32: invalid digit found in string
+///     at lazy_errors/src/error.rs:1234:56"});
 /// ```
 ///
 /// [`or_wrap`]: crate::OrWrap::or_wrap
@@ -245,11 +284,17 @@ pub struct WrappedError<I>
     location: Location,
 }
 
-/// A single, “one of a kind” [`Error`], created from an error message,
+/// A single, “one of a kind” [`Error`], created from an ad-hoc error message,
 /// with source location information that gets added implicitly
 /// when a value of this type is constructed.
 ///
-/// Printing and “pretty-printing” is supported as well:
+/// Most of the time this type is used only internally.
+///
+/// Values of this type get created internally
+/// when the [`err!`](crate::err!) macro or
+/// when [`Error::from_message`] are called.
+///
+/// `AdHocError` can be printed and supports “pretty-printing” as well:
 ///
 /// ```
 /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
@@ -367,7 +412,11 @@ impl<I: Display> Display for StashedErrors<I>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let mut errs = ErrorStash::new(|| "Summary");
     /// errs.push("Foo");
@@ -376,7 +425,8 @@ impl<I: Display> Display for StashedErrors<I>
     /// let res: Result<(), Error> = errs.into();
     /// let err = res.unwrap_err();
     ///
-    /// assert_eq!(format!("{err}"), "Summary (2 errors)");
+    /// let printed = format!("{err}");
+    /// assert_eq!(&printed, "Summary (2 errors)");
     ///
     /// let printed = format!("{err:#}");
     /// let printed = replace_line_numbers(&printed);
@@ -394,16 +444,20 @@ impl<I: Display> Display for StashedErrors<I>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// use lazy_errors::prelude::*;
+    /// #[cfg(feature = "std")]
+    /// use lazy_errors::{prelude::*, Result};
     ///
-    /// fn run() -> Result<(), Error>
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+    ///
+    /// fn run() -> Result<()>
     /// {
     ///     let mut stash = ErrorStash::new(|| "Parent failed");
     ///     stash.push(parent().unwrap_err());
     ///     stash.into()
     /// }
     ///
-    /// fn parent() -> Result<(), Error>
+    /// fn parent() -> Result<()>
     /// {
     ///     let mut stash = ErrorStash::new(|| "Child failed");
     ///     stash.push(child().unwrap_err());
@@ -417,7 +471,8 @@ impl<I: Display> Display for StashedErrors<I>
     ///
     /// let err = run().unwrap_err();
     ///
-    /// assert_eq!(format!("{err}"), "Parent failed: Child failed: Root cause");
+    /// let printed = format!("{err}");
+    /// assert_eq!(printed, "Parent failed: Child failed: Root cause");
     ///
     /// let printed = format!("{err:#}");
     /// let printed = replace_line_numbers(&printed);
@@ -607,7 +662,11 @@ impl<I> ErrorData<I>
     /// Returns all errors that are direct children of this error.
     ///
     /// ```
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let err = Error::from_message("Something went wrong");
     /// assert!(err.children().is_empty());
@@ -619,21 +678,22 @@ impl<I> ErrorData<I>
     /// let mut err = ErrorStash::new(|| "One or more things went wrong");
     /// err.push("An error");
     /// err.push("Another error");
+    ///
     /// let r: Result<(), Error> = err.into();
     /// let err = r.unwrap_err();
     /// let [e1, e2] = err.children() else {
     ///     unreachable!()
     /// };
+    ///
     /// assert_eq!(&format!("{e1}"), "An error");
     /// assert_eq!(&format!("{e2}"), "Another error");
     /// ```
     ///
     /// Note that this method only returns _direct_ children.
-    /// When you're using [`prelude::Error`](crate::prelude::Error),
-    /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
-    /// i.e. `Box<dyn ...>`. Each of those children may be an [`Error`]
-    /// as well and have multiple children itself. These transitive children
-    /// will _not_ be returned from this method.
+    /// Each of those errors thus may have been created from
+    /// an [`ErrorStash`](crate::ErrorStash),
+    /// which stored another level of errors.
+    /// Such transitive children will _not_ be returned from this method.
     pub fn children(&self) -> &[I]
     {
         match self {
@@ -764,19 +824,24 @@ fn display_location(
 #[cfg(test)]
 mod tests
 {
-    use core::mem::size_of;
-
-    use super::*;
-    use crate::prelude::Stashable; // The common use-case
+    #[test]
+    #[cfg(feature = "std")]
+    fn error_is_small_std()
+    {
+        use crate::prelude::Stashable;
+        assert_small::<super::Error<Stashable>>();
+    }
 
     #[test]
-    fn error_is_small()
+    fn error_is_small_surrogate()
     {
-        assert_small::<Error<Stashable>>();
+        use crate::surrogate_error_trait::prelude::Stashable;
+        assert_small::<super::Error<Stashable>>();
     }
 
     fn assert_small<T>()
     {
+        use core::mem::size_of;
         assert_eq!(size_of::<T>(), size_of::<usize>());
     }
 }

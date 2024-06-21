@@ -17,7 +17,7 @@ use crate::{
 ///
 /// The generic type parameter `F` is a function or closure that
 /// will create the error summary message lazily.
-/// It will be called when converting the [`ErrorStash`] into `Result`.
+/// It will be called when the first error is added.
 /// The generic type parameter `M` is the result returned from `F`,
 /// i.e. the type of the error summary message itself.
 /// The generic type parameter `I` is the
@@ -25,23 +25,19 @@ use crate::{
 ///
 /// Essentially, this type is a builder for something similar to
 /// `Result<(), Vec<Error>>`. Errors can be added by calling
-/// [`push`](Self::push) or by calling methods from the
-/// [`OrStash`] trait on `Result`.
+/// [`push`] or by calling [`or_stash`] on `Result`.
 /// When you're done collecting the errors, the [`ErrorStash`] can be
 /// transformed into `Result<(), Error>` (via [`From`]/[`Into`]),
-/// where [`Error`] basically wraps a [`Vec<Error>`]
+/// where [`Error`] basically wraps a `Vec<E>`
 /// along with a message that summarizes all errors in that list.
-#[cfg_attr(
-    feature = "eyre",
-    doc = r##"
-There's also [`IntoEyreResult`](crate::IntoEyreResult)
-which performs a (lossy) conversion to
-[`eyre::Result`](color_eyre::eyre::Result).
-"##
-)]
+///
 /// ```
 /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+/// #[cfg(feature = "std")]
 /// use lazy_errors::prelude::*;
+///
+/// #[cfg(not(feature = "std"))]
+/// use lazy_errors::surrogate_error_trait::prelude::*;
 ///
 /// let errs = ErrorStash::new(|| "Something went wrong");
 /// assert_eq!(&format!("{errs}"), "Stash of 0 errors currently");
@@ -69,13 +65,23 @@ which performs a (lossy) conversion to
 ///     - Yet another error message
 ///       at lazy_errors/src/stash.rs:1234:56"});
 /// ```
-///
+#[cfg_attr(
+    feature = "eyre",
+    doc = r##"
+
+There's also [`IntoEyreResult`](crate::IntoEyreResult)
+which performs a (lossy) conversion to
+[`eyre::Result`](color_eyre::eyre::Result).
+
+ "##
+)]
 /// If you do not want to create an empty [`ErrorStash`] before adding errors,
 /// you can use [`or_create_stash`] which will
 /// create a [`StashWithErrors`] when an error actually occurs.
 ///
-/// [`OrStash`]: crate::OrStash
+/// [`or_stash`]: crate::OrStash::or_stash
 /// [`or_create_stash`]: crate::OrCreateStash::or_create_stash
+/// [`push`]: Self::push
 pub enum ErrorStash<F, M, I>
 where
     F: FnOnce() -> M,
@@ -94,9 +100,16 @@ where
 /// This type is similar to [`ErrorStash`] except that an [`ErrorStash`]
 /// may be empty. Since [`StashWithErrors`] contains at least one error,
 /// guaranteed by the type system at compile time, this type implements
-/// `Into<Error>` as well as `IntoEyreReport` which returns `eyre::Report`
-/// (instead of `Into<Result>` or `IntoEyreResult`).
-/// Please note that the conversion to `eyre::Report` is lossy.
+/// `Into<Error>`.
+#[cfg_attr(
+    feature = "eyre",
+    doc = r##"
+
+There's also [`IntoEyreReport`](crate::IntoEyreReport)
+which performs a (lossy) conversion to
+[`eyre::Report`](color_eyre::eyre::Report).
+"##
+)]
 #[derive(Debug)]
 pub struct StashWithErrors<I>
 {
@@ -212,7 +225,11 @@ where
     /// Returns `true` if the stash is empty.
     ///
     /// ```
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let mut errs = ErrorStash::new(|| "Summary message");
     /// assert!(errs.is_empty());
@@ -244,10 +261,9 @@ where
     ///
     /// Note that this method only returns errors that have been
     /// put into this stash _directly_.
-    /// When you're using [`prelude::ErrorStash`](crate::prelude::ErrorStash),
-    /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
-    /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
-    /// storing another level of errors.
+    /// Each of those errors thus may have been created from
+    /// an [`ErrorStash`](crate::ErrorStash),
+    /// which stored another level of errors.
     /// Such transitive children will _not_ be returned from this method.
     pub fn errors(&self) -> &[I]
     {
@@ -267,7 +283,11 @@ where
     /// ```
     /// use std::collections::HashMap;
     ///
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// // Always parses two configs, even if the first one contains an error.
     /// // All errors or groups of errors returned from this function
@@ -351,16 +371,19 @@ where
     /// Returns `Ok(())` if the stash is empty, otherwise returns an `Err`
     /// containing all errors from this stash.
     ///
-    /// You can usually call `ErrorStash::into()` instead of this method.
-    /// This method actually does nothing else (besides specifying
-    /// the return type). However, Rust sometimes cannot figure out
-    /// which type you want to convert into, in that case this method
-    /// may be more readable than specifying the concrete types.
-    /// For example:
+    /// You can usually call `into` instead of this method.
+    /// This method actually does nothing else besides specifying
+    /// the return type. In some cases, Rust cannot figure out
+    /// which type you want to convert into.
+    /// This method may be more readable than specifying the concrete types:
     ///
     /// ```
     /// # use core::str::FromStr;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// fn count_numbers(nums: &[&str]) -> Result<usize>
     /// {
@@ -396,8 +419,8 @@ where
 impl<I> StashWithErrors<I>
 {
     /// Creates a [`StashWithErrors`] that contains a single error so far;
-    /// that error and errors added in the future are summarized by
-    /// the supplied message.
+    /// the supplied message shall summarize
+    /// that error and all errors that will be added later.
     #[track_caller]
     pub fn from<M, E>(summary: M, error: E) -> Self
     where
@@ -424,16 +447,17 @@ impl<I> StashWithErrors<I>
     ///
     /// Note that this method only returns errors that have been
     /// put into this stash _directly_.
-    /// When you're using [`prelude::ErrorStash`](crate::prelude::ErrorStash),
-    /// `I` will be [`prelude::Stashable`](crate::prelude::Stashable),
-    /// i.e. `Box<dyn ...>`. Each of those errors thus may be an [`ErrorStash`],
-    /// storing another level of errors.
+    /// Each of those errors thus may have been created from
+    /// an [`ErrorStash`](crate::ErrorStash),
+    /// which stored another level of errors.
     /// Such transitive children will _not_ be returned from this method.
     pub fn errors(&self) -> &[I]
     {
         &self.errors
     }
 
+    /// ⚠️ Do not use this method! ⚠️
+    ///
     /// Returns a [`StashWithErrors`] that's identical to `self`
     /// by replacing the contents of `&mut self` with dummy values.
     ///
@@ -447,6 +471,8 @@ impl<I> StashWithErrors<I>
     /// This method should only be used by the [`try2!`] macro.
     /// When the `Try` trait is stabilized, we can implement it
     /// and remove the [`try2!`] macro and this method.
+    ///
+    /// ⚠️ Do not use this method! ⚠️
     ///
     /// [`try2!`]: crate::try2!
     #[doc(hidden)]
@@ -480,25 +506,72 @@ fn display<I>(
 #[cfg(test)]
 mod tests
 {
-    use crate::prelude::*;
+    use crate::{Error, ErrorStash};
 
     #[test]
-    fn stash_debug_fmt_when_empty()
+    #[cfg(feature = "std")]
+    fn stash_debug_fmt_when_empty_std()
     {
-        let errs = ErrorStash::new(|| "Mock message");
+        use crate::prelude::Stashable;
+        stash_debug_fmt_when_empty::<Stashable>()
+    }
+
+    #[test]
+    fn stash_debug_fmt_when_empty_surrogate()
+    {
+        use crate::surrogate_error_trait::prelude::Stashable;
+        stash_debug_fmt_when_empty::<Stashable>()
+    }
+
+    fn stash_debug_fmt_when_empty<I: std::fmt::Debug>()
+    {
+        let errs = ErrorStash::<_, _, I>::new(|| "Mock message");
 
         assert_eq!(format!("{errs:?}"), "ErrorStash(Empty)");
     }
 
     #[test]
-    fn stash_debug_fmt_with_errors()
+    #[cfg(feature = "std")]
+    fn stash_debug_fmt_with_errors_std()
     {
-        let mut errs = ErrorStash::new(|| "Mock message");
-        errs.push("First error");
-        errs.push(Error::from_message("Second error"));
+        use crate::prelude::Stashable;
+        stash_debug_fmt_with_errors::<Stashable>()
+    }
 
-        #[cfg(feature = "eyre")]
-        errs.push(color_eyre::eyre::eyre!("Third error"));
+    #[test]
+    fn stash_debug_fmt_with_errors_surrogate()
+    {
+        use crate::surrogate_error_trait::prelude::Stashable;
+        stash_debug_fmt_with_errors::<Stashable>()
+    }
+
+    #[test]
+    #[cfg(feature = "eyre")]
+    fn stash_debug_fmt_with_errors_eyre()
+    {
+        use crate::prelude::ErrorStash;
+
+        let mut errs = ErrorStash::new(|| "Mock message");
+
+        errs.push(color_eyre::eyre::eyre!("Eyre error"));
+
+        let msg = format!("{errs:?}");
+        dbg!(&msg);
+
+        assert!(msg.contains("Eyre error"));
+        assert!(msg.contains("lazy_errors"));
+        assert!(msg.contains("stash.rs"));
+    }
+
+    fn stash_debug_fmt_with_errors<'a, I>()
+    where
+        I: std::fmt::Debug,
+        Error<I>: Into<I>,
+        &'a str: Into<I>,
+    {
+        let mut errs = ErrorStash::<_, _, I>::new(|| "Mock message");
+        errs.push("First error");
+        errs.push(Error::<I>::from_message("Second error"));
 
         let msg = format!("{errs:?}");
         dbg!(&msg);
@@ -508,9 +581,6 @@ mod tests
 
         assert!(msg.contains("First error"));
         assert!(msg.contains("Second error"));
-
-        #[cfg(feature = "eyre")]
-        assert!(msg.contains("Third error"));
 
         assert!(msg.contains("lazy_errors"));
         assert!(msg.contains("stash.rs"));

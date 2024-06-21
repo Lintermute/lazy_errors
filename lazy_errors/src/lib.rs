@@ -1,12 +1,16 @@
 #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 //! Effortlessly create, group, and nest arbitrary errors,
 //! and defer error handling ergonomically.
 //!
 //! ```
-//! use core::str::FromStr;
-//!
+//! # use core::str::FromStr;
+//! #[cfg(feature = "std")]
 //! use lazy_errors::{prelude::*, Result};
+//!
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn run(input1: &str, input2: &str) -> Result<()>
 //! {
@@ -61,17 +65,36 @@
 //!
 //! `lazy_errors` provides types, traits, and blanket implementations
 //! on `Result` that can be used to ergonomically defer error handling.
-//! Additionally, `lazy_errors` allows you to easily create ad-hoc errors
-//! as well as wrap, group, and nest a wide variety of errors
-//! in a single common error type, simplifying your codebase.
-//! In that latter regard, `lazy_errors` is similar to `anyhow`/`eyre`,
+//! `lazy_errors` allows you to easily create ad-hoc errors
+//! as well as wrap a wide variety of errors in a single common error type,
+//! simplifying your codebase.
+//! In that latter regard, it is similar to `anyhow`/`eyre`,
 //! except that its reporting isn't as fancy or detailed (for example,
 //! `lazy_errors` tracks source code file name and line numbers instead of
 //! providing full `std::backtrace` support).
-//! On the other hand, `lazy_errors` uses `#![no_std]` by default but
-//! integrates with `std::error::Error` if you enable the `std` feature.
-//! `lazy_errors` also supports error types that aren't `Send` or `Sync`
-//! and allows you to group and nest errors arbitrarily with minimal effort.
+//! On the other hand, `lazy_errors` adds methods to `Result`
+//! that let you continue on failure,
+//! deferring returning `Err` results.
+//! `lazy_errors` allows you to return two or more errors
+//! from functions simultaneously and ergonomically.
+//! `lazy_error` also supports nested errors.
+//! When you return nested errors from functions,
+//! errors will form a tree while “bubbling up”.
+//! You can report that error tree the user/developer in its entirety.
+//!
+//! By default, `lazy_errors` will box your error values (like `anyhow`/`eyre`),
+//! which allows you to use different error types in the same `Result` type.
+//! However, `lazy_errors` will respect static error type information
+//! if you provide it explicitly.
+//! If you do so, you can access fields and methods of your error values
+//! at run-time without needing downcasts.
+//! Both modes of operation can work together, as will be shown
+//! in the example on the bottom of the page.
+//!
+//! While `lazy_error` integrates with `std::error::Error` by default,
+//! it also supports `#![no_std]` if you disable the `std` feature.
+//! In that case, `lazy_errors` also supports error types that aren't
+//! `Sync` (or even `Send`).
 //!
 //! Common reasons to use this crate are:
 //!
@@ -88,20 +111,24 @@
 //!
 //! # Walkthrough
 //!
-//! `lazy_errors` actually supports any error type as long as it's `Sized`;
+//! `lazy_errors` can actually support any error type as long as it's `Sized`;
 //! it doesn't even need to be `Send` or `Sync`. You only need to specify
-//! the generic type parameters accordingly, as shown in the example
+//! the generic type parameters accordingly, as will be shown in the example
 //! on the bottom of this page. Usually however, you'd want to use the
 //! aliased types from the [`prelude`]. When you're using these aliases,
 //! errors will be boxed and you can dynamically return groups of errors
 //! of differing types from the same function.
-//! In the default `#![no_std]` mode, `lazy_errors` can box any error type
-//! that implements the [`Reportable`] marker trait; if necessary,
-//! you can implement that trait in a single line for your custom types.
-//! If you need to handle third-party error types that already implement
-//! `std::error::Error` instead, you can enable the `std` feature.
-//! When `std` is enabled, all error types from this crate will
-//! implement `std::error::Error` as well.
+//!
+//! The `std` feature is enabled by default, making `lazy_error` support
+//! third-party error types that implement `std::error::Error`.
+//! All error types from this crate will implement `std::error::Error` as well
+//! in that case.
+//! If you need `#![no_std]` support, you can disable the `std` feature
+//! and use the [`surrogate_error_trait::prelude`] instead.
+//! If you do so, `lazy_errors` will box any error type that implements the
+//! [`surrogate_error_trait::Reportable`] marker trait.
+//! If necessary, you can implement that trait for your custom types as well
+//! (it's just a single line).
 //!
 //! While `lazy_errors` works standalone, it's not intended to replace
 //! `anyhow` or `eyre`. Instead, this project was started to explore
@@ -123,15 +150,18 @@
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! use lazy_errors::prelude::*;
+//! #[cfg(feature = "std")]
+//! use lazy_errors::{prelude::*, Result};
 //!
-//! fn run() -> Result<(), Error>
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn run() -> Result<()>
 //! {
 //!     let mut stash = ErrorStash::new(|| "Failed to run application");
 //!
-//!     print_if_ascii("🙈").or_stash(&mut stash);
-//!     print_if_ascii("🙉").or_stash(&mut stash);
-//!     print_if_ascii("🙊").or_stash(&mut stash);
+//!     print_if_ascii("❓").or_stash(&mut stash);
+//!     print_if_ascii("❗").or_stash(&mut stash);
 //!     print_if_ascii("42").or_stash(&mut stash);
 //!
 //!     cleanup().or_stash(&mut stash); // Runs regardless of earlier errors
@@ -139,7 +169,7 @@
 //!     stash.into() // `Ok(())` if the stash was still empty
 //! }
 //!
-//! fn print_if_ascii(text: &str) -> Result<(), Error>
+//! fn print_if_ascii(text: &str) -> Result<()>
 //! {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
@@ -149,7 +179,7 @@
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<(), Error>
+//! fn cleanup() -> Result<()>
 //! {
 //!     Err(err!("Cleanup failed"))
 //! }
@@ -161,13 +191,10 @@
 //!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
-//!         - Input is not ASCII: '🙈'
+//!         - Input is not ASCII: '❓'
 //!           at lazy_errors/src/lib.rs:1234:56
 //!           at lazy_errors/src/lib.rs:1234:56
-//!         - Input is not ASCII: '🙉'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Input is not ASCII: '🙊'
+//!         - Input is not ASCII: '❗'
 //!           at lazy_errors/src/lib.rs:1234:56
 //!           at lazy_errors/src/lib.rs:1234:56
 //!         - Cleanup failed
@@ -195,7 +222,7 @@
 //! to create a non-empty container on-demand, whenever necessary.
 //! When [`or_create_stash`] is called on `Result::Err`, the error
 //! will be put into a [`StashWithErrors`] instead of an [`ErrorStash`].
-//! [`ErrorStash`] and [`StashWithErrors`] behave quite similarly.
+//! [`ErrorStash`] and [`StashWithErrors`] behave similarly.
 //! While both [`ErrorStash`] and [`StashWithErrors`] can take additional
 //! errors, a [`StashWithErrors`] is guaranteed to be non-empty.
 //! The type system will be aware that there is at least one error.
@@ -206,9 +233,13 @@
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! use lazy_errors::prelude::*;
+//! #[cfg(feature = "std")]
+//! use lazy_errors::{prelude::*, Result};
 //!
-//! fn run() -> Result<(), Error>
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn run() -> Result<()>
 //! {
 //!     match write("❌").or_create_stash(|| "Failed to run application") {
 //!         Ok(()) => Ok(()),
@@ -219,7 +250,7 @@
 //!     }
 //! }
 //!
-//! fn write(text: &str) -> Result<(), Error>
+//! fn write(text: &str) -> Result<()>
 //! {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
@@ -227,7 +258,7 @@
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<(), Error>
+//! fn cleanup() -> Result<()>
 //! {
 //!     Err(err!("Cleanup failed"))
 //! }
@@ -317,45 +348,38 @@ fn main()
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! use lazy_errors::prelude::*;
+//! #[cfg(feature = "std")]
+//! use lazy_errors::{prelude::*, Result};
 //!
-//! fn first() -> Result<(), Error>
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn parent() -> Result<()>
 //! {
-//!     let mut stash = ErrorStash::new(|| "In first(): second() failed");
-//!     stash.push(second().unwrap_err());
+//!     let mut stash = ErrorStash::new(|| "In parent(): child() failed");
+//!     stash.push(child().unwrap_err());
 //!     stash.into()
 //! }
 //!
-//! fn second() -> Result<(), Error>
+//! fn child() -> Result<()>
 //! {
-//!     let mut stash = ErrorStash::new(|| "In second(): third() failed");
-//!     stash.push(third().unwrap_err());
-//!     stash.into()
-//! }
-//!
-//! fn third() -> Result<(), Error>
-//! {
-//!     let mut stash = ErrorStash::new(|| "In third(): There were errors");
-//!
+//!     let mut stash = ErrorStash::new(|| "In child(): There were errors");
 //!     stash.push("First error");
 //!     stash.push("Second error");
-//!
 //!     stash.into()
 //! }
 //!
 //! fn main()
 //! {
-//!     let err = first().unwrap_err();
+//!     let err = parent().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
-//!         In first(): second() failed
-//!         - In second(): third() failed
-//!           - In third(): There were errors
-//!             - First error
-//!               at lazy_errors/src/lib.rs:1234:56
-//!             - Second error
-//!               at lazy_errors/src/lib.rs:1234:56
+//!         In parent(): child() failed
+//!         - In child(): There were errors
+//!           - First error
+//!             at lazy_errors/src/lib.rs:1234:56
+//!           - Second error
 //!             at lazy_errors/src/lib.rs:1234:56
 //!           at lazy_errors/src/lib.rs:1234:56"});
 //! }
@@ -375,39 +399,33 @@ fn main()
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+//! #[cfg(feature = "std")]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! fn first() -> Result<(), Error>
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn run(s: &str) -> Result<u32>
 //! {
-//!     second().or_wrap_with(|| "Something went wrong")
+//!     parse(s).or_wrap_with(|| format!("Not an u32: '{s}'"))
 //! }
 //!
-//! fn second() -> Result<()>
+//! fn parse(s: &str) -> Result<u32>
 //! {
-//!     third().or_wrap() // Wrap it “silently”: No message, just file location
-//! }
+//!     let r: Result<u32, core::num::ParseIntError> = s.parse();
 //!
-//! fn third() -> Result<()>
-//! {
-//!     let mut stash = ErrorStash::new(|| "In third(): There were errors");
-//!
-//!     stash.push("First error");
-//!     stash.push("Second error");
-//!
-//!     stash.into()
+//!     // Wrap the error type “silently”:
+//!     // No additional message, just file location and wrapped error type.
+//!     r.or_wrap()
 //! }
 //!
 //! fn main()
 //! {
-//!     let err = first().unwrap_err();
+//!     let err = run("❌").unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
-//!         Something went wrong: In third(): There were errors
-//!         - First error
-//!           at lazy_errors/src/lib.rs:1234:56
-//!         - Second error
-//!           at lazy_errors/src/lib.rs:1234:56
+//!         Not an u32: '❌': invalid digit found in string
 //!         at lazy_errors/src/lib.rs:1234:56
 //!         at lazy_errors/src/lib.rs:1234:56"});
 //! }
@@ -419,7 +437,11 @@ fn main()
 //! and turn it into an ad-hoc [`Error`] at the same time:
 //!
 //! ```
-//! use lazy_errors::{prelude::*, Result};
+//! #[cfg(feature = "std")]
+//! use lazy_errors::prelude::*;
+//!
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::prelude::*;
 //!
 //! let pid = 42;
 //! let err: Error = err!("Error in process {pid}");
@@ -429,55 +451,59 @@ fn main()
 //! However, the error tree can have almost any _inner error type_ as leaf.
 //!
 //! ### Supported Error Types
+#![cfg_attr(
+    feature = "std",
+    doc = r##"
+
+The [`prelude`] module exports commonly used traits and _aliased_ types.
+Importing `lazy_errors::prelude::*` should set you up for most use-cases.
+You may also want to import [`lazy_errors::Result`](crate::Result).
+In `![no_std]` mode or when `core::error::Error` is not available,
+you can import the [`surrogate_error_trait::prelude`] instead, and use
+the corresponding [`lazy_errors::surrogate_error_trait::Result`].
+
+ "##
+)]
+#![cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+
+The [`surrogate_error_trait::prelude`] module exports commonly used traits
+and _aliased_ types.
+Importing `lazy_errors::surrogate_error_trait::prelude::*` should set you up
+for many use-cases.
+You may also want to import [`lazy_errors::surrogate_error_trait::Result`].
+Consider enabling the `std` feature
+which makes the `lazy_errors::prelude::*` available.
+Types exported from the “regular” prelude
+have better intercompatibility with other crates.
+
+ "##
+)]
+//! [`lazy_errors::surrogate_error_trait::Result`]:
+//! crate::surrogate_error_trait::Result
 //!
-//! The [`prelude`] module exports commonly used traits and _aliased_ types.
-//! Importing `prelude::*` should set you up for most use-cases.
-//! You may also want to import [`lazy_errors::Result`](crate::Result).
 //! When you're using the aliased types from the prelude, this crate should
-//! support any `Result<_, E>` if `E` implements `Into<`[`Stashable`]`>`.
+//! support any `Result<_, E>` if `E` implements `Into<Stashable>`.
 //! [`Stashable`] is, basically, a `Box<dyn E>`, where `E` is either
-//! `std::error::Error` or a similar trait in `#![no_std]` mode.
+//! `std::error::Error` or a surrogate trait in `#![no_std]` mode
+//! ([`surrogate_error_trait::Reportable`]).
 //! Thus, using the aliased types from the prelude, any error you put into
 //! any of the containers defined by this crate will be boxed.
 //! The `Into<Box<dyn E>>` trait bound was chosen because it is implemented
 //! for a wide range of error types or _“error-like”_ types.
 //! Some examples of types that satisfy this constraint are:
 //!
-//! - [`&str`]
-//! - [`String`]
-//! - `eyre::Report`
+//! - `&str`
+//! - `String`
 //! - `anyhow::Error`
-//! - [`std::error::Error`]
+//! - `eyre::Report`
+//! - `std::error::Error`
 //! - All error types from this crate
 //!
 //! The primary error type from this crate is [`Error`].
 //! You can convert all supported _error-like_ types into [`Error`]
-//! by calling [`or_wrap`] or [`or_wrap_with`]:
-//!
-//! ```
-//! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! use lazy_errors::prelude::*;
-//!
-//! fn parent() -> Result<(), Error>
-//! {
-//!     child().or_wrap_with(|| "In parent(): child() failed")
-//! }
-//!
-//! fn child() -> Result<(), String>
-//! {
-//!     Err(String::from("Arbitrary String"))
-//! }
-//!
-//! fn main()
-//! {
-//!     let err = parent().unwrap_err();
-//!     let printed = format!("{err:#}");
-//!     let printed = replace_line_numbers(&printed);
-//!     assert_eq!(printed, indoc::indoc! {"
-//!         In parent(): child() failed: Arbitrary String
-//!         at lazy_errors/src/lib.rs:1234:56"});
-//! }
-//! ```
+//! by calling [`or_wrap`] or [`or_wrap_with`].
 //!
 //! In other words, this crate supports a wide variety of error types.
 //! However, in some cases you might need a different kind of flexibility
@@ -490,35 +516,33 @@ fn main()
 //! in [`ErrorStash`] or in [`Error`]. When you're using the type aliases
 //! from the [`prelude`], `I` will always be [`Stashable`].
 //! However, you do not need to use [`Stashable`] at all.
-//! The concrete type to use for `I` may be chosen by the user arbitrarily.
+//! You can chose the type to use for `I` arbitrarily.
 //! It can be a custom type and does not need to implement any traits
 //! or auto traits except [`Sized`].
 //! Thus, if the default aliases defined in the prelude
 //! do not suit your purpose, you can import the required traits
-//! and types manually and define custom aliases, as shown below.
+//! and types manually and define custom aliases, as shown in the next example.
 //!
 //! ### Example: Custom Error Types
 //!
 //! Here's a complex example that does not use the [`prelude`]
-//! but instead defines its own aliases.
-//! These error types have their static type information still present,
-//! enabling running recovery logic without having to rely on downcasts
-//! at run-time. The example also shows how such custom error types
-//! can still be used alongside the boxed error types ([`Stashable`]s)
+//! but instead defines its own aliases. In the example, `Error<CustomError>`
+//! and `ParserErrorStash` don't box their errors. Instead, they have all
+//! error type information present statically, which allows you to write
+//! recovery logic without having to rely on downcasts at run-time.
+//! The example also shows how such custom error types
+//! can still be used alongside the boxed error types ([`Stashable`])
 //! with custom lifetimes.
 //!
 //! ```
-//! use std::str::FromStr;
+//! # use std::str::FromStr;
+//! use lazy_errors::{err, ErrorStash, OrStash, StashedResult};
 //!
-//! use lazy_errors::{
-//!     err,
-//!     Error,
-//!     ErrorStash,
-//!     OrStash,
-//!     Result,
-//!     Stashable,
-//!     StashedResult,
-//! };
+//! #[cfg(feature = "std")]
+//! use lazy_errors::Stashable;
+//!
+//! #[cfg(not(feature = "std"))]
+//! use lazy_errors::surrogate_error_trait::Stashable;
 //!
 //! #[derive(thiserror::Error, Debug)]
 //! pub enum CustomError<'a>
@@ -530,9 +554,11 @@ fn main()
 //!     NotU32(&'a str),
 //! }
 //!
-//! // Use `CustomError` as `I` for both `Error` and `ErrorStash`:
-//! type ParserError<'a> = Error<CustomError<'a>>;
-//! type ParserStash<'a, F, M> = ErrorStash<F, M, CustomError<'a>>;
+//! // Use `CustomError` as inner error type `I` for `ErrorStash`:
+//! type ParserErrorStash<'a, F, M> = ErrorStash<F, M, CustomError<'a>>;
+//!
+//! // Allow using `CustomError` as `I` but use `Stashable` by default:
+//! pub type Error<I = Stashable<'static>> = lazy_errors::Error<I>;
 //!
 //! fn main()
 //! {
@@ -544,7 +570,7 @@ fn main()
 //! {
 //!     let mut errs = ErrorStash::new(|| "Application failed");
 //!
-//!     let parser_result = parse_input(input); // Soft errors
+//!     let parser_result = parse(input); // Soft errors
 //!     if let Err(e) = parser_result {
 //!         println!("There were errors.");
 //!         println!("Errors will be returned after showing some suggestions.");
@@ -561,13 +587,13 @@ fn main()
 //!     errs.into()
 //! }
 //!
-//! fn parse_input<'a>(input: &[&'a str]) -> Result<(), ParserError<'a>>
+//! fn parse<'a>(input: &[&'a str]) -> Result<(), Error<CustomError<'a>>>
 //! {
 //!     if input.is_empty() {
 //!         return Err(Error::wrap(CustomError::EmptyInput));
 //!     }
 //!
-//!     let mut errs = ParserStash::new(|| {
+//!     let mut errs = ParserErrorStash::new(|| {
 //!         "Input has correctable or uncorrectable errors"
 //!     });
 //!
@@ -592,7 +618,7 @@ fn main()
 //!     errs.into() // Return list of all parser errors, if any
 //! }
 //!
-//! fn handle_parser_errors(errs: &ParserError) -> Result<()>
+//! fn handle_parser_errors(errs: &Error<CustomError>) -> Result<(), Error>
 //! {
 //!     println!("Step #2: Starting...");
 //!
@@ -616,7 +642,7 @@ fn main()
 //!         .map_err(|_| CustomError::NotU32(s))
 //! }
 //!
-//! fn guess_hex(s: &str) -> Result<u32>
+//! fn guess_hex(s: &str) -> Result<u32, Error>
 //! {
 //!     match u32::from_str_radix(s, 16) {
 //!         Ok(v) => {
@@ -667,62 +693,96 @@ fn main()
 //! [`or_create_stash`]: crate::OrCreateStash::or_create_stash
 //! [`or_wrap`]: crate::OrWrap::or_wrap
 //! [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
+#![cfg_attr(
+    feature = "std",
+    doc = r##"
+[`prelude`]: crate::prelude
+[`Stashable`]: crate::Stashable
+"##
+)]
+#![cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+[`prelude`]: crate::surrogate_error_trait::prelude
+[`Stashable`]: crate::surrogate_error_trait::Stashable
+"##
+)]
 
-#![cfg_attr(not(feature = "std"), no_std)]
 #[macro_use]
 extern crate std;
 
 #[macro_use]
 extern crate alloc;
 
-pub mod boxed;
+#[cfg(feature = "std")]
 pub mod prelude;
+
+pub mod surrogate_error_trait;
 
 mod err;
 mod error;
-mod eyre;
 mod or_create_stash;
 mod or_stash;
 mod or_wrap;
 mod or_wrap_with;
-mod reportable;
 mod stash;
-mod stashable;
 mod try2;
 
 pub use error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
-#[cfg(feature = "eyre")]
-pub use eyre::{IntoEyreReport, IntoEyreResult};
 pub use or_create_stash::OrCreateStash;
 pub use or_stash::{OrStash, StashedResult};
 pub use or_wrap::OrWrap;
 pub use or_wrap_with::OrWrapWith;
-#[cfg(any(not(feature = "std"), doc))]
-pub use reportable::Reportable;
 pub use stash::{ErrorStash, StashWithErrors};
-pub use stashable::Stashable;
+pub use surrogate_error_trait::Reportable;
 
-/// Like the `Result<T, E>` we all know, but uses [`prelude::Error`]
-/// as default value for `E` if not present.
+#[cfg(feature = "eyre")]
+mod eyre;
+#[cfg(feature = "eyre")]
+pub use eyre::{IntoEyreReport, IntoEyreResult};
+
+/// Alias of the `Result<T, E>` we all know, but uses
+/// [`prelude::Error`]
+/// as default value for `E` if not specified explicitly.
+#[cfg(feature = "std")]
 pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 
-use alloc::string::String;
+/// The “default” [_inner error type_ `I`](crate::Error#inner-error-type-i)
+/// used by the type aliases from the
+/// [crate::prelude]
+/// _without_ `'static` lifetime.
+///
+/// The trait bounds `Send` and `Sync` are present because they are
+/// required by some third-party crates. Without `Send` and `Sync`,
+/// these crates may not be able to consume error types from this crate,
+/// such as [`Error`].
+/// Note that you can always simply use a custom inner error type.
+/// For example, in your codebase you could define `Stashable` instead
+/// as `Box<dyn std::error::Error + 'static>` and set an alias for
+/// [`Error<I>`] accordingly.
+///
+/// [`Error`]: crate::error::Error
+/// [`Error<I>`]: crate::error::Error#inner-error-type-i
+#[cfg(feature = "std")]
+pub type Stashable<'a> =
+    alloc::boxed::Box<dyn std::error::Error + Send + Sync + 'a>;
 
-/// Do not use this method.
-/// We just need this to be able to use [`assert_eq`] in doctests.
+/// ⚠️ Do not use this method! ⚠️
 ///
 /// Replaces parts of the string that maybe are a line number
 /// or maybe are a column number with static mock values.
 /// Also sneakly changes `\` to `/` because this may be a path separator.
 ///
+/// We just need this method to be able to use [`assert_eq`] in doctests.
 /// This function may behave incorrectly in many cases.
 /// It's also implemented inefficiently.
 /// We just need this to be able to use [`assert_eq`] in doctests.
-/// Do not use this method.
+///
+/// ⚠️ Do not use this method! ⚠️
 #[doc(hidden)]
-pub fn doctest_line_num_helper(text: &str) -> String
+pub fn doctest_line_num_helper(text: &str) -> alloc::string::String
 {
-    use alloc::{format, string::ToString};
+    use alloc::string::ToString;
 
     // We need to call this method from the doctests.
     // Using a regex would require us to add the regex crate
