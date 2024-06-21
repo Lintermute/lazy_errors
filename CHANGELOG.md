@@ -31,6 +31,13 @@ This file documents all changes affecting the [semver] version of this project.
     continue using the surrogate error trait (to support old Rust versions),
     and/or you will be able to set the feature flag that will enable
     `error_in_core` in `lazy_errors`.
+- Require inner errors be `Sync` in `no_std` mode as well
+  - Previously, these errors types did not need to implement `Sync`
+  - Now, `std` and `no_std` mode have identical auto-trait bounds
+  - Using the aliased types from the two preludes,
+    this will allow you to put `no_std` errors into `std` stashes,
+    and vice-versa
+  - You can always specify your own aliases if your error types aren't `Sync`
 
 ### Added
 

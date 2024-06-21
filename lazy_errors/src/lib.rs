@@ -93,8 +93,9 @@
 //!
 //! While `lazy_error` integrates with `std::error::Error` by default,
 //! it also supports `#![no_std]` if you disable the `std` feature.
-//! In that case, `lazy_errors` also supports error types that aren't
-//! `Sync` (or even `Send`).
+//! When you define a few simple type aliases,
+//! `lazy_errors` easily supports error types that aren't
+//! `Sync` or even `Send`.
 //!
 //! Common reasons to use this crate are:
 //!
