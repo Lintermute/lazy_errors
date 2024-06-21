@@ -8,6 +8,7 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    versioning-strategy: lockfile-only
 
   - package-ecosystem: "github-actions"
     directory: "/"
