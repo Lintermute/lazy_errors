@@ -120,8 +120,36 @@ pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 /// The [`Send`] trait bound
 /// [makes errors usable with `thread::spawn` and `task::spawn`][1].
 ///
+/// The [`Sync`] trait bound is present because
+/// `Stashable` from the `std` prelude (`lazy_errors::prelude`)
+/// needs the [`Sync`] bound itself.
+/// By making the these two types share the same auto-trait bounds,
+/// `lazy_errors` can be used identically in `std`/`no_std` configuration.
+/// Furthermore, it allows you to put `no_std` errors into `std` stashes,
+/// and vice-versa.
+///
 /// [1]: https://github.com/dtolnay/anyhow/issues/81
-pub type Stashable<'a> = alloc::boxed::Box<dyn crate::Reportable + Send + 'a>;
+#[cfg_attr(
+    feature = "std",
+    doc = r##"
+```
+use lazy_errors::prelude as lazy_errors_std;
+use lazy_errors::surrogate_error_trait::prelude as lazy_errors_no_std;
+
+let std_error = lazy_errors_std::Error::from_message("");
+let no_std_error = lazy_errors_no_std::Error::from_message("");
+let mut std_stash = lazy_errors_std::ErrorStash::new(|| "");
+let mut no_std_stash = lazy_errors_no_std::ErrorStash::new(|| "");
+
+std_stash.push(no_std_error);
+no_std_stash.push(std_error);
+```
+"##
+)]
+/// Note that you can always define your own type aliases
+/// that don't require your error types to be `Sync` or `Send`.
+pub type Stashable<'a> =
+    alloc::boxed::Box<dyn crate::Reportable + Send + Sync + 'a>;
 
 /// Makes all [`Reportable`]s implement
 /// `Into<Box<dyn Reportable>>`,
