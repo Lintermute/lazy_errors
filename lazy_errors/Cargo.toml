@@ -10,6 +10,7 @@ repository = "https://github.com/Lintermute/lazy_errors"
 license = "MIT OR Apache-2.0"
 
 [features]
+default = ["std"]
 eyre = ["std", "dep:color-eyre"]
 std = []
 

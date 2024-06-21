@@ -6,8 +6,22 @@ use crate::Error;
 /// Do not implement this trait.
 /// Importing the trait is sufficient due to blanket implementations.
 /// The trait is implemented on `Result<_, E>` if `E` implements `Into<I>`,
-/// where `I` is the [_inner error type_](Error#inner-error-type-i),
-/// typically [`Stashable`](crate::prelude::Stashable).
+/// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
+/// typically [`prelude::Stashable`].
+#[cfg_attr(
+    feature = "std",
+    doc = r##"
+
+[`prelude::Stashable`]: crate::prelude::Stashable
+"##
+)]
+#[cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
+"##
+)]
 pub trait OrWrap<T, E>
 {
     /// If `self` is `Result::Ok(value)`, returns `Result::Ok(value)`;
@@ -15,21 +29,18 @@ pub trait OrWrap<T, E>
     /// where `e2` is an [`Error`] containing a [`WrappedError`]
     /// that will hold the original `e1` value.
     ///
+    /// Allows you to convert any `Result<_, E>` to `Result<_, Error>`
+    /// if `E` implements `Into<I>`, where `I` is the
+    /// [_inner error type_ of `Error`](crate::Error#inner-error-type-i)
+    /// typically [`prelude::Stashable`].
+    ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
-    ///     assert!(run(&["foo", "bar"]).is_ok());
-    ///
-    ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
-    ///     let printed = format!("{err:#}");
-    ///     let printed = replace_line_numbers(&printed);
-    ///     assert_eq!(printed, indoc::indoc! {"
-    ///         ❌
-    ///         at lazy_errors/src/or_wrap.rs:1234:56"});
-    /// }
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run(tokens: &[&str]) -> Result<(), Error>
     /// {
@@ -43,6 +54,18 @@ pub trait OrWrap<T, E>
     ///         Some(not_ascii) => Err(not_ascii.to_string()),
     ///     }
     /// }
+    ///
+    /// fn main()
+    /// {
+    ///     assert!(run(&["foo", "bar"]).is_ok());
+    ///
+    ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
+    ///     let printed = format!("{err:#}");
+    ///     let printed = replace_line_numbers(&printed);
+    ///     assert_eq!(printed, indoc::indoc! {"
+    ///         ❌
+    ///         at lazy_errors/src/or_wrap.rs:1234:56"});
+    /// }
     /// ```
     ///
     /// Please take a look at [`or_wrap_with`] if you'd like to
@@ -50,6 +73,18 @@ pub trait OrWrap<T, E>
     ///
     /// [`WrappedError`]: crate::WrappedError
     /// [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
+    #[cfg_attr(
+        feature = "std",
+        doc = r##"
+[`prelude::Stashable`]: crate::prelude::Stashable
+"##
+    )]
+    #[cfg_attr(
+        not(feature = "std"),
+        doc = r##"
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
+"##
+    )]
     fn or_wrap<I>(self) -> Result<T, Error<I>>
     where E: Into<I>;
 }

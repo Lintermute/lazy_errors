@@ -1,5 +1,3 @@
-#![cfg(feature = "eyre")]
-
 use alloc::fmt::Display;
 
 use color_eyre::eyre;
@@ -27,16 +25,16 @@ where I: IntoEyreReport
     ///
     /// ```
     /// # use color_eyre::eyre;
-    /// use eyre::{Result, WrapErr};
+    /// use eyre::WrapErr;
     /// use lazy_errors::prelude::*;
     ///
-    /// fn parse(s: &str) -> Result<i32>
+    /// fn parse(s: &str) -> eyre::Result<i32>
     /// {
     ///     use std::str::FromStr;
     ///     i32::from_str(s).wrap_err_with(|| format!("Not an i32: '{s}'"))
     /// }
     ///
-    /// fn parse_all() -> Result<()>
+    /// fn parse_all() -> eyre::Result<()>
     /// {
     ///     let mut stash = ErrorStash::new(|| "Failed to parse");
     ///
@@ -54,9 +52,9 @@ where I: IntoEyreReport
     /// assert!(msg.contains("🙊"));
     /// ```
     ///
-    /// Note: This method discards information because
-    /// [`IntoEyreReport`] flattens the type into
-    /// a single string that is then passed to [`eyre::eyre!`].
+    /// Note: This method discards information because [`IntoEyreReport`]
+    /// flattens the type into a single string
+    /// that is then passed to [`eyre::eyre!`].
     ///
     /// In some cases, for example if you're using [`or_create_stash`],
     /// you may want to use [`IntoEyreReport`] instead.
@@ -83,10 +81,10 @@ pub trait IntoEyreReport
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
     /// # use color_eyre::eyre;
-    /// use eyre::{bail, eyre, Result};
+    /// use eyre::{bail, eyre};
     /// use lazy_errors::prelude::*;
     ///
-    /// fn adhoc_error() -> Result<()>
+    /// fn adhoc_error() -> eyre::Result<()>
     /// {
     ///     let err = Error::from_message("first() failed");
     ///     bail!(err.into_eyre_report());
@@ -99,7 +97,7 @@ pub trait IntoEyreReport
     ///     first() failed
     ///     at lazy_errors/src/eyre.rs:1234:56"});
     ///
-    /// fn wrapped_report() -> Result<()>
+    /// fn wrapped_report() -> eyre::Result<()>
     /// {
     ///     let report = eyre!("This is an eyre::Report");
     ///     let err: Error = Error::wrap(report);
@@ -113,7 +111,7 @@ pub trait IntoEyreReport
     ///     This is an eyre::Report
     ///     at lazy_errors/src/eyre.rs:1234:56"});
     ///
-    /// fn stashed_errors() -> Result<()>
+    /// fn stashed_errors() -> eyre::Result<()>
     /// {
     ///     let mut stash = ErrorStash::new(|| "One or more things failed");
     ///
@@ -135,6 +133,10 @@ pub trait IntoEyreReport
     ///       at lazy_errors/src/eyre.rs:1234:56
     ///       at lazy_errors/src/eyre.rs:1234:56"});
     /// ```
+    ///
+    /// Note: This method discards information because it
+    /// flattens the type into a single string
+    /// that is then passed to [`eyre::eyre!`].
     ///
     /// In some cases, for example if you're using [`or_stash`],
     /// you may want to use [`IntoEyreResult`] instead.

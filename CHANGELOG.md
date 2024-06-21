@@ -4,10 +4,42 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- Enable the `std` feature by default
+  - If you have already been using the `std` feature, please _remove_
+    the `std` feature declaration from your `Cargo.toml` file
+    to make it future-proof
+  - `std::error::Error` was moved to `core::error` on nightly.
+    When `core::error::Error` is stable, the `std` feature will be removed
+    from `lazy_errors` because we won't need to depend on `std` anymore at all.
+  - The `error_in_core` feature will probably be part of Rust 1.81
+- Require explicit opt-in for `#![no_std]` support
+  - `lazy_errors::Reportable` (the surrogate `std::error::Error` trait) and
+    associated type aliases are _not_ part of the _regular_ prelude anymore.
+    If you need `#![no_std]` support,
+    - simply import `lazy_errors::surrogate_error_trait::prelude::*`
+      instead of the regular prelude, and
+    - disable the `std` feature (`--no-default-features`).
+  - This change avoids conflicts between `std` and `no_std` dependents:
+    The old implementation of the `std` feature in `lazy_errors`
+    violated cargo's “features should be additive” rule.
+    When one of your dependencies depended on `lazy_errors` with `std` support,
+    and another one depended on `lazy_errors` having `std` disabled,
+    the dependencies may have failed to compile in some cases.
+  - When `error_in_core` is part of stable Rust, you will be able to
+    continue using the surrogate error trait (to support old Rust versions),
+    and/or you will be able to set the feature flag that will enable
+    `error_in_core` in `lazy_errors`.
+
 ### Added
 
 - Add `ErrorData::children` and mark `ErrorData::childs` as deprecated
 - Add the `try2!` macro to the prelude
+
+### Fixed
+
+- Fix and clarify several parts of the documentation
 
 ## [`v0.5.0`] (2024-06-11)
 

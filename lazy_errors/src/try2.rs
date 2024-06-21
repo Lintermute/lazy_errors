@@ -3,8 +3,12 @@
 /// The [`try2!`] macro works well with [`or_stash`] and [`ErrorStash::ok`]:
 ///
 /// ```
-/// use lazy_errors::{prelude::*, Result};
 /// # use core::str::FromStr;
+/// #[cfg(feature = "std")]
+/// use lazy_errors::{prelude::*, Result};
+///
+/// #[cfg(not(feature = "std"))]
+/// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 ///
 /// fn parse_version(s: &str) -> Result<(u32, u32)>
 /// {

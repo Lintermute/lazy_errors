@@ -8,7 +8,21 @@ use crate::StashWithErrors;
 /// Importing the trait is sufficient due to blanket implementations.
 /// The trait is implemented on `Result<_, E>` if `E` implements `Into<I>`,
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
-/// typically [`Stashable`](crate::prelude::Stashable).
+/// typically [`prelude::Stashable`].
+#[cfg_attr(
+    feature = "std",
+    doc = r##"
+
+[`prelude::Stashable`]: crate::prelude::Stashable
+"##
+)]
+#[cfg_attr(
+    not(feature = "std"),
+    doc = r##"
+
+[`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
+"##
+)]
 pub trait OrCreateStash<F, M, T, E>
 where
     F: FnOnce() -> M,
@@ -20,33 +34,24 @@ where
     /// the provided error summary message and that will contain
     /// `e` as its first element.
     ///
-    /// Used to create a list of one or more errors lazily, deferring
-    /// error handling. For example, after some error occurred,
-    /// you may want to run one or more fallible cleanup steps.
+    /// Use this method to defer both handling errors as well as
+    /// creating an [`ErrorStash`].
+    /// In case the `Result` is `Result::Err(e)`, `or_create_stash` will
+    /// create a [`StashWithErrors`] that contains `e` as its sole element.
+    /// You can turn this stash into [`Error`] later.
+    /// Meanwhile, you can run additional fallible functions,
+    /// for example fallible cleanup steps.
     /// If those cleanup steps return errors as well, you can add them to
-    /// the current error list by calling this method.
+    /// the current error list by calling [`or_stash`].
     /// When you're done, you can return the entire error list in one go.
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(feature = "std")]
     /// use lazy_errors::prelude::*;
     ///
-    /// fn main()
-    /// {
-    ///     assert!(write_or_cleanup("ASCII text").is_ok());
-    ///
-    ///     let err = write_or_cleanup("❌").unwrap_err();
-    ///     let printed = format!("{err:#}");
-    ///     let printed = replace_line_numbers(&printed);
-    ///     assert_eq!(printed, indoc::indoc! {"
-    ///         Failed to write
-    ///         - Input is not ASCII: '❌'
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
-    ///         - Cleanup failed
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56
-    ///           at lazy_errors/src/or_create_stash.rs:1234:56"});
-    /// }
+    /// #[cfg(not(feature = "std"))]
+    /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn write_or_cleanup(text: &str) -> Result<(), Error>
     /// {
@@ -73,14 +78,33 @@ where
     /// {
     ///     Err(err!("Cleanup failed"))
     /// }
+    ///
+    /// fn main()
+    /// {
+    ///     assert!(write_or_cleanup("ASCII text").is_ok());
+    ///
+    ///     let err = write_or_cleanup("❌").unwrap_err();
+    ///     let printed = format!("{err:#}");
+    ///     let printed = replace_line_numbers(&printed);
+    ///     assert_eq!(printed, indoc::indoc! {"
+    ///         Failed to write
+    ///         - Input is not ASCII: '❌'
+    ///           at lazy_errors/src/or_create_stash.rs:1234:56
+    ///           at lazy_errors/src/or_create_stash.rs:1234:56
+    ///         - Cleanup failed
+    ///           at lazy_errors/src/or_create_stash.rs:1234:56
+    ///           at lazy_errors/src/or_create_stash.rs:1234:56"});
+    /// }
     /// ```
     ///
     /// Sometimes you want to create an empty [`ErrorStash`] beforehand,
-    /// adding errors (if any) as you go. Please take a look at [`or_stash`]
-    /// in that case.
+    /// adding errors (if any) as you go.
+    /// In that case, please take a look at [`ErrorStash`] and [`or_stash`].
     ///
+    /// [`Error`]: crate::Error
     /// [`ErrorStash`]: crate::ErrorStash
     /// [`or_stash`]: crate::OrStash::or_stash
+    /// [`or_create_stash`]: Self::or_create_stash
     fn or_create_stash<I>(self, f: F) -> Result<T, StashWithErrors<I>>
     where E: Into<I>;
 }
