@@ -1,0 +1,132 @@
+# This workflow is triggered on schedule and will check the primary branch(es)
+# of this repository for whether dependencies are secure, up-to-date, and
+# whether the build still succeeds with an up-to-date Cargo.lock.
+#
+# The pipeline may fail for several reasons, such as:
+#
+# - Security vulnerabilities getting reported for dependencies
+# - New versions (major or minor) of dependencies getting released
+# - New clippy lints
+# - Different rustfmt behavior
+# - ...
+#
+# This pipeline will update `Cargo.lock` locally if necessary.
+# The updated `Cargo.lock` file will be discarded after the run.
+# Note that other pipelines in this repo _require_ `Cargo.lock` be up-to-date.
+# If it isn't, you'll have to run `cargo update`, commit `Cargo.lock`, and
+# rebase your branch to have that commit be the first one in your pull request.
+
+name: Not Dependabot
+
+on:
+
+  schedule:
+    #        ┌───────────── minute (0 - 59)
+    #        │ ┌───────────── hour (0 - 23)
+    #        │ │ ┌───────────── day of the month (1 - 31)
+    #        │ │ │ ┌───────────── month (1 - 12 or JAN-DEC)
+    #        │ │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    #        │ │ │ │ │
+    - cron: '0 0 * * *'
+
+jobs:
+
+  # Determine the branch names on which to run the actual jobs below.
+  init:
+    timeout-minutes: 1
+    runs-on: ubuntu-latest
+
+    outputs:
+      branches: ${{ steps.set_branches.outputs.branches }}
+
+    steps:
+    - id: set_branches
+      name: "Determine branches to check"
+      run: |
+        case "${{ github.event_name }}" in
+            "schedule") branches="[ \"main\" ]" ;;
+            *)
+                echo "Unknown event: ${{ github.event_name }}" >&2
+                exit 1
+        esac
+        echo "branches=$branches" >> $GITHUB_OUTPUT
+
+  deps:
+    needs: init
+    timeout-minutes: 15
+
+    # Results should be the same on all systems.
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-upgrades
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-upgrades
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    # `cargo audit` checks `Cargo.lock`, so run it before/without `cargo update`
+    - name: Check dependencies for security vulnerabilities
+      run: cargo --locked audit --deny warnings
+
+    - name: Check dependencies for new major/minor versions
+      run: cargo upgrades
+
+  build:
+    needs: init
+    timeout-minutes: 60
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+
+    steps:
+
+    - name: Install nightly Rust toolchain with rustfmt & miri
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rustfmt, miri
+
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Install cargo-hack & cargo-tarpaulin
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack, cargo-tarpaulin
+
+    # Avoid linter errors due to changed line endings
+    - run: git config --global core.autocrlf false
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    - name: Update dependencies in Cargo.lock
+      run: cargo update
+
+    # FIXME: `xtask ci miri` runs `cargo clean`, deleting its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Install xtask
+      run: cargo install --path xtask
+
+    # Run the actual tests (note that we already checked dependencies above).
+    - name: Run CI checks
+      run: xtask ci all --skip-dependency-checks

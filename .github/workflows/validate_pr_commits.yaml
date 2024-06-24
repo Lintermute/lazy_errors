@@ -5,6 +5,10 @@
 # Does NOT validate the result of the merge; see `validate.yaml` for that.
 # This pipeline is a "rebase --exec" variant of `validate.yaml`.
 #
+# Note that this pipeline requires `Cargo.lock` be up-to-date.
+# If it isn't, you'll have to run `cargo update`, commit `Cargo.lock`, and
+# rebase your branch to have that commit be the first one in your pull request.
+#
 # Please note the following refs:
 #
 # - github.ref      → refs/heads/$branch_name, resp. refs/pull/$pr_id/merge
