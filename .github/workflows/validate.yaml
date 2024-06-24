@@ -1,13 +1,16 @@
 # Runs the CI quality gate: compilation, linting, testing, dependency checking,
 # and so on. Parallel implementation of the steps defined in the `xtask` crate.
 #
-# This pipeline is triggered on push, on PR events, and on schedule.
-# If triggered on schedule, this pipeline will check whether the
-# primary branches of this repo still build.
-# If triggered by a pull request event, this pipeline will validate
-# what would be the result of merging that PR.
+# This pipeline is triggered on push and on pull request events.
 # If triggered by a push, this pipeline will check the commit that was pushed
 # (i.e. the Git HEAD of the branch that was pushed to).
+# If triggered by a PR event, this pipeline will validate
+# what would be the result of merging that PR.
+# If you're pushing to a branch that has an open PR, both will be checked.
+#
+# Note that this pipeline requires `Cargo.lock` be up-to-date.
+# If it isn't, you'll have to run `cargo update`, commit `Cargo.lock`, and
+# rebase your branch to have that commit be the first one in your pull request.
 #
 # Please note the following refs:
 #
@@ -32,18 +35,6 @@ on:
 
   workflow_call:
 
-  # Ensure we find out if the build breaks, e.g. due to new clippy lints.
-  schedule:
-    #        ┌───────────── minute (0 - 59)
-    #        │ ┌───────────── hour (0 - 23)
-    #        │ │ ┌───────────── day of the month (1 - 31)
-    #        │ │ │ ┌───────────── month (1 - 12 or JAN-DEC)
-    #        │ │ │ │ ┌───────────── day of the week (0 - 6 or SUN-SAT)
-    #        │ │ │ │ │
-    #        │ │ │ │ │
-    #        │ │ │ │ │
-    - cron: '0 0 * * *'
-
 jobs:
 
   # Determine the branch names on which to run the actual jobs below.
@@ -61,7 +52,6 @@ jobs:
         case "${{ github.event_name }}" in
             "push") branches="[ \"${{ github.ref_name }}\" ]" ;;
             "pull_request") branches="[ \"${{ github.ref }}\" ]" ;;
-            "schedule") branches="[ \"main\" ]" ;;
             *)
                 echo "Unknown event: ${{ github.event_name }}" >&2
                 exit 1
