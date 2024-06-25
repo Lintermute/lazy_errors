@@ -265,13 +265,13 @@ pub struct StashedErrors<I>
 /// let printed1 = replace_line_numbers(&printed1);
 /// assert_eq!(printed1, indoc::indoc! {"
 ///     invalid digit found in string
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 ///
 /// let printed2 = format!("{err2:#}");
 /// let printed2 = replace_line_numbers(&printed2);
 /// assert_eq!(printed2, indoc::indoc! {"
 ///     Not an u32: invalid digit found in string
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 /// ```
 ///
 /// [`or_wrap`]: crate::OrWrap::or_wrap
@@ -309,7 +309,7 @@ pub struct WrappedError<I>
 /// let printed = replace_line_numbers(&printed);
 /// assert_eq!(printed, indoc::indoc! {"
 ///     Something went wrong
-///     at lazy_errors/src/error.rs:1234:56"});
+///     at src/error.rs:1234:56"});
 /// ```
 #[derive(Debug)]
 pub struct AdHocError
@@ -433,9 +433,9 @@ impl<I: Display> Display for StashedErrors<I>
     /// assert_eq!(printed, indoc::indoc! {"
     ///     Summary
     ///     - Foo
-    ///       at lazy_errors/src/error.rs:1234:56
+    ///       at src/error.rs:1234:56
     ///     - Bar
-    ///       at lazy_errors/src/error.rs:1234:56"});
+    ///       at src/error.rs:1234:56"});
     /// ```
     ///
     /// When there is only a single error in a group, that error's output
@@ -480,8 +480,8 @@ impl<I: Display> Display for StashedErrors<I>
     ///     Parent failed
     ///     - Child failed
     ///       - Root cause
-    ///         at lazy_errors/src/error.rs:1234:56
-    ///       at lazy_errors/src/error.rs:1234:56"});
+    ///         at src/error.rs:1234:56
+    ///       at src/error.rs:1234:56"});
     /// ```
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
     {
@@ -672,7 +672,10 @@ impl<I> ErrorData<I>
     /// assert!(err.children().is_empty());
     ///
     /// let err = Error::wrap("A thing went wrong");
-    /// let [e] = err.children() else { unreachable!() };
+    /// let e = match err.children() {
+    ///     [e] => e,
+    ///     _ => unreachable!(),
+    /// };
     /// assert_eq!(&format!("{e}"), "A thing went wrong");
     ///
     /// let mut err = ErrorStash::new(|| "One or more things went wrong");
@@ -681,8 +684,9 @@ impl<I> ErrorData<I>
     ///
     /// let r: Result<(), Error> = err.into();
     /// let err = r.unwrap_err();
-    /// let [e1, e2] = err.children() else {
-    ///     unreachable!()
+    /// let [e1, e2] = match err.children() {
+    ///     [e1, e2] => [e1, e2],
+    ///     _ => unreachable!(),
     /// };
     ///
     /// assert_eq!(&format!("{e1}"), "An error");

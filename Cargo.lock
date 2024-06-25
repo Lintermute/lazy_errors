@@ -212,7 +212,6 @@ version = "0.0.0"
 dependencies = [
  "color-eyre",
  "indoc",
- "test-case",
  "thiserror",
 ]
 

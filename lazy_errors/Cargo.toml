@@ -8,6 +8,7 @@ readme = "../README.md"
 authors = ["Andreas Waidler <lintermute@mailbox.org>"]
 repository = "https://github.com/Lintermute/lazy_errors"
 license = "MIT OR Apache-2.0"
+version = "0.0.0"
 
 [features]
 default = [
@@ -32,5 +33,4 @@ color-eyre = { version = "0.6.2", optional = true }
 
 [dev-dependencies]
 indoc = "2.0.5"
-test-case = "3.1.0"
 thiserror = "1.0.56"
