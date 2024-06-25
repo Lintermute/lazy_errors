@@ -255,3 +255,63 @@ jobs:
 
     - name: Check dependencies
       run: cargo xtask ci deps
+
+
+  msrv:
+    needs: init
+    timeout-minutes: 15
+    runs-on: ${{ matrix.system }}
+
+    strategy:
+      matrix:
+        rust-version: [ "1.77", "1.61" ]
+        system: [ ubuntu-latest, windows-latest, macos-latest ]
+        branch: ${{ fromJson(needs.init.outputs.branches) }}
+        profile: [ dev, release ]
+
+    steps:
+
+    # `xtask` needs a recent Rust version.
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    # FIXME: `xtask ci build` tries to overwrite its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Install xtask
+      run: cargo install --path xtask
+
+    - name: Install Rust ${{ matrix.rust-version }} toolchain with clippy
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust-version }}
+        components: clippy
+
+    - name: Run clippy
+      run: >
+        xtask ci clippy
+        --rust-version ${{ matrix.rust-version }}
+        --exclude-xtask
+        --profile ${{ matrix.profile }}
+
+    - name: Run tests
+      run: >
+        xtask ci test
+        --rust-version ${{ matrix.rust-version }}
+        --exclude-xtask
+        --profile ${{ matrix.profile }}
+
+    - name: Build artifacts
+      run: >
+        xtask ci build
+        --rust-version ${{ matrix.rust-version }}
+        --exclude-xtask
+        --profile ${{ matrix.profile }}
