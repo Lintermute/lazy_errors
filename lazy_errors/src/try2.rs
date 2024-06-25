@@ -15,7 +15,7 @@
 ///     let mut errs = ErrorStash::new(|| "Invalid version");
 ///
 ///     // If `parts` does not contain exactly two elements, return right now.
-///     let [major, minor] = try2!(s
+///     let [major, minor]: [_; 2] = try2!(s
 ///         .split('.')
 ///         .collect::<Vec<_>>()
 ///         .try_into()

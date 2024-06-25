@@ -4,6 +4,23 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+This release comes with a few breaking changes.
+By introducing these breaking changes, several unexpected compilation failures
+that might have happened in certain edge cases should now be fixed in advance.
+For example, you can now compile `lazy_errors` on any Rust version since 1.61
+(depending on the set of enabled features).
+Additionally, you and/or your dependencies can now use both the
+`std` and the `no_std` feature set of `lazy_errors` simultaneously.
+Not only have conflicts been resolved, but the different data types
+are now compatible as well.
+
+While these breaking changes may require some additional effort now,
+they prepare you for either seamlessly switching to `core::error::Error`-based
+errors when that Rust version reaches stable, or benefiting from
+`lazy_errors` now being backwards compatible in that regard.
+
+Here's the details:
+
 ### Breaking Changes
 
 - Enable the `std` feature by default
@@ -43,6 +60,12 @@ This file documents all changes affecting the [semver] version of this project.
 
 - Add `ErrorData::children` and mark `ErrorData::childs` as deprecated
 - Add the `try2!` macro to the prelude
+- Hide “new” error types from `core` and `alloc` behind `rust-v*` feature flags
+  (enabled by default)
+- Support all Rust versions since Rust 1.77 (all features & combinations)
+- Support all Rust versions since Rust 1.61 (by disabling some features)
+- Document feature flags in top-level docs
+- Clarify MSRV in top-level docs
 
 ### Fixed
 

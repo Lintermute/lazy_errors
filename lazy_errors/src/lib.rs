@@ -110,6 +110,28 @@
 //!   `std::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
 //!   traits.
 //!
+//! # Feature Flags
+//!
+//! - `std`:
+//!   - Support error types that implement `std::error::Error`.
+//!   - Implement `std::error::Error` for `lazy_error` error types.
+//! - `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions.
+//! - `rust-vN` (where `N` is a Rust version number): Does nothing more than add
+//!   support for some error types from `core` and `alloc` that were stabilized
+//!   in the respective Rust version.
+//!
+//! # MSRV
+//!
+//! The MSRV of `lazy_errors` depends on the set of enabled features:
+//!
+//! - Rust 1.77 supports all features and combinations thereof.
+//! - Rust versions 1.61 .. 1.77 need you to disable all `rust-vN` features
+//!   where `N` is greater than the version of your Rust toolchain. For example,
+//!   to compile `lazy_errors` on Rust 1.66, you have to disable `rust-v1.77`
+//!   and `rust-v1.69`, but not `rust-v1.66`.
+//! - `eyre` needs at least Rust 1.65.
+//! - Rust versions older than 1.61 are unsupported.
+//!
 //! # Walkthrough
 //!
 //! `lazy_errors` can actually support any error type as long as it's `Sized`;
@@ -193,14 +215,14 @@
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '❓'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Input is not ASCII: '❗'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -272,11 +294,11 @@
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Failed to run application
 //!         - Input is not ASCII: '❌'
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56
 //!         - Cleanup failed
-//!           at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!           at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -334,11 +356,11 @@ fn main()
     assert_eq!(printed, indoc::indoc! {"
         Failed to run
         - Input is not ASCII: '❌'
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56
         - Cleanup failed
-          at lazy_errors/src/lib.rs:1234:56
-          at lazy_errors/src/lib.rs:1234:56"});
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56"});
 }
 ```
 "##
@@ -379,10 +401,10 @@ fn main()
 //!         In parent(): child() failed
 //!         - In child(): There were errors
 //!           - First error
-//!             at lazy_errors/src/lib.rs:1234:56
+//!             at src/lib.rs:1234:56
 //!           - Second error
-//!             at lazy_errors/src/lib.rs:1234:56
-//!           at lazy_errors/src/lib.rs:1234:56"});
+//!             at src/lib.rs:1234:56
+//!           at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -427,8 +449,8 @@ fn main()
 //!     let printed = replace_line_numbers(&printed);
 //!     assert_eq!(printed, indoc::indoc! {"
 //!         Not an u32: '❌': invalid digit found in string
-//!         at lazy_errors/src/lib.rs:1234:56
-//!         at lazy_errors/src/lib.rs:1234:56"});
+//!         at src/lib.rs:1234:56
+//!         at src/lib.rs:1234:56"});
 //! }
 //! ```
 //!
@@ -679,15 +701,15 @@ have better intercompatibility with other crates.
 //! Application failed
 //! - Input has correctable or uncorrectable errors
 //!   - Input 'f' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
+//!     at src/lib.rs:72:52
 //!   - Input 'oobar' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
+//!     at src/lib.rs:72:52
 //!   - Input '3b' is not u32
-//!     at lazy_errors/src/lib.rs:72:52
-//!   at lazy_errors/src/lib.rs:43:14
+//!     at src/lib.rs:72:52
+//!   at src/lib.rs:43:14
 //! - Unsupported input 'oobar': invalid digit found in string
-//!   at lazy_errors/src/lib.rs:120:17
-//!   at lazy_errors/src/lib.rs:45:18
+//!   at src/lib.rs:120:17
+//!   at src/lib.rs:45:18
 //! ```
 //!
 //! [`or_stash`]: crate::OrStash::or_stash
@@ -783,12 +805,12 @@ pub type Stashable<'a> =
 #[doc(hidden)]
 pub fn doctest_line_num_helper(text: &str) -> alloc::string::String
 {
-    use alloc::string::ToString;
-
     // We need to call this method from the doctests.
     // Using a regex would require us to add the regex crate
     // as dependency in general.
-    let mut result = text.to_string();
+
+    #[allow(clippy::useless_format)] // `use` would break MSRV
+    let mut result = format!("{text}");
     loop {
         let result_before = result.clone();
         for i in 0..=9 {
@@ -802,7 +824,8 @@ pub fn doctest_line_num_helper(text: &str) -> alloc::string::String
         }
     }
 
-    result = result.replace(".rs::", ".rs:1234:56");
-
-    result.replace('\\', "/")
+    result
+        .replace('\\', "/")
+        .replace("at lazy_errors/src/", "at src/")
+        .replace(".rs::", ".rs:1234:56")
 }

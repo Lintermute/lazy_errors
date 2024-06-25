@@ -240,6 +240,15 @@ pub struct QuickArgs
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct CheckArgs
 {
+    /// Rust toolchain version to use (leave blank to use the default
+    /// toolchain).
+    #[clap(long)]
+    rust_version: Option<RustVersion>,
+
+    /// Whether to exclude the `xtask` workspace package.
+    #[clap(long)]
+    exclude_xtask: bool,
+
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long)]
     profile: Profile,
@@ -248,6 +257,15 @@ pub struct CheckArgs
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct TestArgs
 {
+    /// Rust toolchain version to use (leave blank to use the default
+    /// toolchain).
+    #[clap(long)]
+    rust_version: Option<RustVersion>,
+
+    /// Whether to exclude the `xtask` workspace package.
+    #[clap(long)]
+    exclude_xtask: bool,
+
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long)]
     profile: Profile,
@@ -260,6 +278,11 @@ pub struct TestArgs
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct DocsArgs
 {
+    /// Rust toolchain version to use (leave blank to use the default
+    /// toolchain).
+    #[clap(long)]
+    rust_version: Option<RustVersion>,
+
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     #[clap(long)]
     profile: Profile,
@@ -268,6 +291,15 @@ pub struct DocsArgs
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct BuildArgs
 {
+    /// Rust toolchain version to use (leave blank to use the default
+    /// toolchain).
+    #[clap(long)]
+    rust_version: Option<RustVersion>,
+
+    /// Whether to exclude the `xtask` workspace package.
+    #[clap(long)]
+    exclude_xtask: bool,
+
     #[clap(long)]
     /// Whether to pass `--release` to cargo or run in `dev` profile.
     profile: Profile,
@@ -288,6 +320,11 @@ pub struct CoverageArgs
 #[derive(clap::Args, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 pub struct MiriArgs
 {
+    /// Rust toolchain version to use (leave blank to use the default
+    /// toolchain).
+    #[clap(long)]
+    rust_version: Option<RustVersion>,
+
     /// Run ignored tests as well.
     #[clap(long)]
     include_ignored_tests: bool,
@@ -300,11 +337,30 @@ enum Profile
     Release,
 }
 
+#[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
+enum RustVersion
+{
+    #[clap(name = "1.77")]
+    V1_77,
+    #[clap(name = "1.69")]
+    V1_69,
+    #[clap(name = "1.66")]
+    V1_66,
+    #[clap(name = "1.64")]
+    V1_64,
+    #[clap(name = "1.61")]
+    V1_61,
+}
+
 impl CheckArgs
 {
     fn new(profile: Profile) -> Self
     {
-        Self { profile }
+        Self {
+            rust_version: None,
+            exclude_xtask: false,
+            profile,
+        }
     }
 }
 
@@ -313,6 +369,8 @@ impl TestArgs
     fn new(args: &AllArgs, profile: Profile) -> Self
     {
         Self {
+            rust_version: None,
+            exclude_xtask: false,
             profile,
             include_ignored_tests: args.include_ignored_tests,
         }
@@ -323,7 +381,10 @@ impl DocsArgs
 {
     fn new(profile: Profile) -> Self
     {
-        Self { profile }
+        Self {
+            rust_version: None,
+            profile,
+        }
     }
 }
 
@@ -331,7 +392,11 @@ impl BuildArgs
 {
     fn new(profile: Profile) -> Self
     {
-        Self { profile }
+        Self {
+            rust_version: None,
+            exclude_xtask: false,
+            profile,
+        }
     }
 }
 
@@ -351,6 +416,7 @@ impl MiriArgs
     fn new(args: &AllArgs) -> Self
     {
         Self {
+            rust_version:          None,
             include_ignored_tests: args.include_ignored_tests,
         }
     }
@@ -485,10 +551,14 @@ fn check(args: &CheckArgs) -> CommandLine
         "check",
         "--locked",
         "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
         "--all-targets",
     ];
+
+    if args.exclude_xtask {
+        task.push("--exclude=xtask");
+    }
+
+    task.extend(as_feature_flags(&args.rust_version));
 
     match args.profile {
         Profile::Release => task.push("--release"),
@@ -509,10 +579,14 @@ fn clippy(args: &CheckArgs) -> CommandLine
         "clippy",
         "--locked",
         "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
         "--all-targets",
     ];
+
+    if args.exclude_xtask {
+        task.push("--exclude=xtask");
+    }
+
+    task.extend(as_feature_flags(&args.rust_version));
 
     match args.profile {
         Profile::Release => task.push("--release"),
@@ -527,15 +601,13 @@ fn clippy(args: &CheckArgs) -> CommandLine
 fn test(args: &TestArgs) -> CommandLine
 {
     // WARNING: `--all-targets` enables benchmarks and disables doctests.
-    let mut task = vec![
-        "cargo",
-        "hack",
-        "test",
-        "--locked",
-        "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
-    ];
+    let mut task = vec!["cargo", "hack", "test", "--locked", "--workspace"];
+
+    if args.exclude_xtask {
+        task.push("--exclude=xtask");
+    }
+
+    task.extend(as_feature_flags(&args.rust_version));
 
     match args.profile {
         Profile::Release => task.push("--release"),
@@ -563,10 +635,10 @@ fn docs(args: &DocsArgs) -> CommandLine
         "doc",
         "--locked",
         "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
         "--no-deps",
     ];
+
+    task.extend(as_feature_flags(&args.rust_version));
 
     match args.profile {
         Profile::Release => task.push("--release"),
@@ -584,11 +656,14 @@ fn build(args: &BuildArgs) -> CommandLine
         "build",
         "--locked",
         "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
         "--all-targets",
-        "--exclude=xtask",
     ];
+
+    if args.exclude_xtask {
+        task.push("--exclude=xtask");
+    }
+
+    task.extend(as_feature_flags(&args.rust_version));
 
     match args.profile {
         Profile::Release => task.push("--release"),
@@ -644,9 +719,9 @@ fn miri(args: &MiriArgs) -> [CommandLine; 3]
         "test",
         "--locked",
         "--workspace",
-        "--feature-powerset",
-        "--optional-deps",
     ];
+
+    test.extend(as_feature_flags(&args.rust_version));
 
     if args.include_ignored_tests {
         test.extend(&["--", "--include-ignored"]);
@@ -662,6 +737,62 @@ fn deps() -> [CommandLine; 3]
     let audit = vec!["cargo", "--locked", "audit", "--deny", "warnings"];
 
     [upgrades, update, audit]
+}
+
+fn as_feature_flags(
+    rust_version: &Option<RustVersion>,
+) -> &'static [&'static str]
+{
+    match rust_version {
+        None => &[
+            "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+            "--ignore-unknown-features",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_77) => &[
+            "--version-range=1.77..=1.77",
+            "--exclude-features=default",
+            "--features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+            "--ignore-unknown-features",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_69) => &[
+            "--version-range=1.69..=1.69",
+            "--exclude-features=default",
+            "--features=rust-v1.69,rust-v1.66,rust-v1.64",
+            "--ignore-unknown-features",
+            "--exclude-features=rust-v1.77",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_66) => &[
+            "--version-range=1.66..=1.66",
+            "--exclude-features=default",
+            "--features=rust-v1.66,rust-v1.64",
+            "--ignore-unknown-features",
+            "--exclude-features=rust-v1.77,rust-v1.69",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_64) => &[
+            "--version-range=1.64..=1.64",
+            "--exclude-features=default,eyre",
+            "--features=rust-v1.64",
+            "--ignore-unknown-features",
+            "--exclude-features=rust-v1.77,rust-v1.69,rust-v1.66",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_61) => &[
+            "--version-range=1.61..=1.61",
+            "--exclude-features=default,eyre",
+            "--exclude-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+    }
 }
 
 #[cfg(test)]
@@ -685,15 +816,27 @@ mod tests
         &[
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--no-deps"],
+                "--no-deps",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
         ]; "minimal tasklist")]
     #[test_case(
         &["xtask", "ci", "all"],
@@ -702,50 +845,92 @@ mod tests
 
             &["cargo", "hack", "clippy",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--", "-Dwarnings"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--", "-Dwarnings",
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--no-deps"],
+                "--no-deps",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--exclude=xtask"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
-                "--output-dir", "tarpaulin-report-dev"],
+                "--output-dir", "tarpaulin-report-dev"
+            ],
 
             &["cargo", "hack", "clippy",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--release", "--", "-Dwarnings"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release", "--", "-Dwarnings"
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--release"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--no-deps", "--release"],
+                "--no-deps",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--exclude=xtask", "--release"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
                 "--output-dir", "tarpaulin-report-release",
-                "--release"],
+                "--release"
+            ],
 
             &["cargo", "+nightly", "--locked", "clean"],
             &["cargo", "+nightly", "hack", "miri", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "+nightly", "--locked", "clean"],
             &["cargo", "upgrades"],
             &["cargo", "--locked", "update" ],
@@ -756,36 +941,71 @@ mod tests
         &[
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--no-deps"],
+                "--no-deps",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--exclude=xtask"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
 
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--release"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--release"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--no-deps", "--release"],
+                "--no-deps",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--all-targets", "--exclude=xtask", "--release"],
+                "--all-targets",
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
         ]; "stable tasklist")]
     fn transform_args_to_tasks(
         args: &[&str],
@@ -802,42 +1022,62 @@ mod tests
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--", "--include-ignored"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--", "--include-ignored"
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
-                "--output-dir", "tarpaulin-report-dev"],
+                "--output-dir", "tarpaulin-report-dev"
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--release", "--", "--include-ignored"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release", "--", "--include-ignored"
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
                 "--output-dir", "tarpaulin-report-release",
-                "--release"],
+                "--release"
+            ],
         ]; "can run ignored tests w/o coverage")]
     #[test_case(
         &["xtask", "ci", "all", "--include-ignored-tests-in-coverage"],
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
                 "--output-dir", "tarpaulin-report-dev",
-                "--", "--include-ignored"],
+                "--", "--include-ignored"
+            ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--feature-powerset", "--optional-deps",
-                "--release"],
+                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--ignore-unknown-features",
+                "--feature-powerset",
+                "--optional-deps",
+                "--release"
+            ],
             &["cargo", "tarpaulin",
                 "--locked", "--workspace",
                 "--all-features", "--all-targets", "--doc", "--no-fail-fast",
                 "--output-dir", "tarpaulin-report-release",
-                "--release", "--", "--include-ignored"],
+                "--release", "--", "--include-ignored"
+            ],
         ]; "can run ignored tests only for coverage")]
     fn tasklist_contains(args: &[&str], task_sublist: &[&[&str]])
         -> Result<()>

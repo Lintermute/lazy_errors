@@ -267,22 +267,27 @@ impl Reportable for alloc::collections::TryReserveError
 {
 }
 
+#[cfg(feature = "rust-v1.69")]
 impl Reportable for core::ffi::FromBytesUntilNulError
 {
 }
 
+#[cfg(feature = "rust-v1.64")]
 impl Reportable for core::ffi::FromBytesWithNulError
 {
 }
 
+#[cfg(feature = "rust-v1.64")]
 impl Reportable for alloc::ffi::FromVecWithNulError
 {
 }
 
+#[cfg(feature = "rust-v1.64")]
 impl Reportable for alloc::ffi::IntoStringError
 {
 }
 
+#[cfg(feature = "rust-v1.64")]
 impl Reportable for alloc::ffi::NulError
 {
 }
@@ -291,6 +296,7 @@ impl Reportable for core::fmt::Error
 {
 }
 
+#[cfg(feature = "rust-v1.77")]
 impl Reportable for core::net::AddrParseError
 {
 }
@@ -323,6 +329,7 @@ impl Reportable for alloc::string::FromUtf16Error
 {
 }
 
+#[cfg(feature = "rust-v1.66")]
 impl Reportable for core::time::TryFromFloatSecsError
 {
 }
