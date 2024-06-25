@@ -731,8 +731,8 @@ dual licensed as above, without any additional terms or conditions.
  [__link42]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=OrWrapWith::or_wrap_with
  [__link43]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=OrWrap::or_wrap
  [__link44]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link45]: Error#inner-error-type-i
- [__link46]: `err!`
+ [__link45]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link46]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/macro.err.html
  [__link47]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=Error
  [__link48]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=prelude
  [__link49]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=Result
@@ -748,7 +748,7 @@ dual licensed as above, without any additional terms or conditions.
  [__link58]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
  [__link59]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
  [__link6]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=prelude
- [__link60]: Error#inner-error-type-i
+ [__link60]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/struct.Error.html#inner-error-type-i
  [__link61]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=ErrorStash
  [__link62]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=Error
  [__link63]: https://docs.rs/lazy_errors/0.6.0/lazy_errors/?search=prelude
