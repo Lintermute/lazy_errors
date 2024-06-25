@@ -74,6 +74,16 @@ jobs:
 
     steps:
 
+    - name: Install stable Rust toolchain with clippy
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Install cargo-hack
+      uses: taiki-e/install-action@v2
+      with:
+        tool: cargo-hack
+
     # For whatever reason, Git needs user name and email for the rebase
     # on some agents but not on others.
     - name: Configure Git
@@ -86,23 +96,16 @@ jobs:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
 
-    - name: Install stable Rust toolchain with clippy
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        components: clippy
-
-    - name: Install cargo-hack
-      uses: taiki-e/install-action@v2
-      with:
-        tool: cargo-hack
-
+    # FIXME: `xtask ci build` tries to overwrite its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
     - name: Build and test
       run: >
         git rebase
         --fork-point 'origin/${{ github.base_ref }}'
-        --exec 'cargo xtask ci clippy --profile ${{ matrix.profile }}'
-        --exec 'cargo xtask ci test   --profile ${{ matrix.profile }}'
-        --exec 'cargo xtask ci build  --profile ${{ matrix.profile }}'
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci clippy --profile ${{ matrix.profile }}'
+        --exec 'xtask ci test   --profile ${{ matrix.profile }}'
+        --exec 'xtask ci build  --profile ${{ matrix.profile }}'
 
 
   coverage:

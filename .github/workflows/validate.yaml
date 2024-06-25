@@ -102,10 +102,6 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
-      with:
-        ref: ${{ matrix.branch }}
-
     - name: Install stable Rust toolchain with clippy
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -116,14 +112,23 @@ jobs:
       with:
         tool: cargo-hack
 
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ matrix.branch }}
+
+    # FIXME: `xtask ci build` tries to overwrite its own binary.
+    # FIXME: This is not possible on Windows, so install it before running it.
+    - name: Install xtask
+      run: cargo install --path xtask
+
     - name: Run clippy
-      run: cargo xtask ci clippy --profile ${{ matrix.profile }}
+      run: xtask ci clippy --profile ${{ matrix.profile }}
 
     - name: Run tests
-      run: cargo xtask ci test --profile ${{ matrix.profile }}
+      run: xtask ci test --profile ${{ matrix.profile }}
 
     - name: Build artifacts
-      run: cargo xtask ci build --profile ${{ matrix.profile }}
+      run: xtask ci build --profile ${{ matrix.profile }}
 
 
   coverage:
