@@ -110,6 +110,28 @@
 //!   `std::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
 //!   traits.
 //!
+//! # Feature Flags
+//!
+//! - `std`:
+//!   - Support error types that implement `std::error::Error`.
+//!   - Implement `std::error::Error` for `lazy_error` error types.
+//! - `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions.
+//! - `rust-vN` (where `N` is a Rust version number): Does nothing more than add
+//!   support for some error types from `core` and `alloc` that were stabilized
+//!   in the respective Rust version.
+//!
+//! # MSRV
+//!
+//! The MSRV of `lazy_errors` depends on the set of enabled features:
+//!
+//! - Rust 1.77 supports all features and combinations thereof.
+//! - Rust versions 1.61 .. 1.77 need you to disable all `rust-vN` features
+//!   where `N` is greater than the version of your Rust toolchain. For example,
+//!   to compile `lazy_errors` on Rust 1.66, you have to disable `rust-v1.77`
+//!   and `rust-v1.69`, but not `rust-v1.66`.
+//! - `eyre` needs at least Rust 1.65.
+//! - Rust versions older than 1.61 are unsupported.
+//!
 //! # Walkthrough
 //!
 //! `lazy_errors` can actually support any error type as long as it's `Sized`;
