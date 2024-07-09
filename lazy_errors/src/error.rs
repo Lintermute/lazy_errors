@@ -104,7 +104,6 @@ pub type Location = &'static core::panic::Location<'static>;
 /// On the other hand, such error types are completely unsupported by `eyre`:
 ///
 /// ```compile_fail
-/// # use color_eyre::eyre;
 /// use eyre::Error;
 ///
 /// struct CustomError;
@@ -132,7 +131,6 @@ pub type Location = &'static core::panic::Location<'static>;
 ///
 /// ```compile_fail
 /// # extern crate alloc;
-/// # use color_eyre::eyre;
 /// use alloc::rc::Rc;
 /// use eyre::eyre;
 ///

@@ -319,7 +319,6 @@
 
 ```
 # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-# use color_eyre::eyre;
 use lazy_errors::prelude::*;
 use eyre::bail;
 
@@ -760,9 +759,9 @@ pub use stash::{ErrorStash, StashWithErrors};
 pub use surrogate_error_trait::Reportable;
 
 #[cfg(feature = "eyre")]
-mod eyre;
+mod into_eyre;
 #[cfg(feature = "eyre")]
-pub use eyre::{IntoEyreReport, IntoEyreResult};
+pub use into_eyre::{IntoEyreReport, IntoEyreResult};
 
 /// Alias of the `Result<T, E>` we all know, but uses
 /// [`prelude::Error`]

@@ -71,7 +71,7 @@ use crate::{
 
 There's also [`IntoEyreResult`](crate::IntoEyreResult)
 which performs a (lossy) conversion to
-[`eyre::Result`](color_eyre::eyre::Result).
+[`eyre::Result`](eyre::Result).
 
  "##
 )]
@@ -107,7 +107,7 @@ where
 
 There's also [`IntoEyreReport`](crate::IntoEyreReport)
 which performs a (lossy) conversion to
-[`eyre::Report`](color_eyre::eyre::Report).
+[`eyre::Report`](eyre::Report).
 "##
 )]
 #[derive(Debug)]
@@ -553,7 +553,7 @@ mod tests
 
         let mut errs = ErrorStash::new(|| "Mock message");
 
-        errs.push(color_eyre::eyre::eyre!("Eyre error"));
+        errs.push(eyre::eyre!("Eyre error"));
 
         let msg = format!("{errs:?}");
         dbg!(&msg);
