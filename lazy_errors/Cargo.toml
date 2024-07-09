@@ -18,7 +18,7 @@ default = [
   "rust-v1.66",
   "rust-v1.64",
 ]
-eyre = ["std", "dep:color-eyre"]
+eyre = ["std", "dep:eyre"]
 std = []
 "rust-v1.77" = []
 "rust-v1.69" = []
@@ -29,7 +29,7 @@ std = []
 all-features = true
 
 [dependencies]
-color-eyre = { version = "0.6.2", optional = true }
+eyre = { version = "0.6.2", optional = true }
 
 [dev-dependencies]
 indoc = "2.0.5"

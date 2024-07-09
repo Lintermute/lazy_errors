@@ -4,6 +4,12 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- Replaces the optional `color_eyre` dependency with `eyre`.
+  This fixes the build on some older Rust toolchain versions,
+  which broke due to a new version of a transitive dependency.
+
 ## [`v0.6.0`] (2024-06-25)
 
 This release comes with a few breaking changes.

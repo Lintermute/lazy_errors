@@ -1,7 +1,5 @@
 use alloc::fmt::Display;
 
-use color_eyre::eyre;
-
 use crate::{
     error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError},
     stash::{ErrorStash, StashWithErrors},
@@ -24,7 +22,6 @@ where I: IntoEyreReport
     /// i.e. `Result<_, E>` where `E` is [`eyre::Report`]:
     ///
     /// ```
-    /// # use color_eyre::eyre;
     /// use eyre::WrapErr;
     /// use lazy_errors::prelude::*;
     ///
@@ -80,7 +77,6 @@ pub trait IntoEyreReport
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// # use color_eyre::eyre;
     /// use eyre::{bail, eyre};
     /// use lazy_errors::prelude::*;
     ///
@@ -95,7 +91,7 @@ pub trait IntoEyreReport
     /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     first() failed
-    ///     at src/eyre.rs:1234:56"});
+    ///     at src/into_eyre.rs:1234:56"});
     ///
     /// fn wrapped_report() -> eyre::Result<()>
     /// {
@@ -109,7 +105,7 @@ pub trait IntoEyreReport
     /// let printed = replace_line_numbers(&printed);
     /// assert_eq!(printed, indoc::indoc! {"
     ///     This is an eyre::Report
-    ///     at src/eyre.rs:1234:56"});
+    ///     at src/into_eyre.rs:1234:56"});
     ///
     /// fn stashed_errors() -> eyre::Result<()>
     /// {
@@ -127,11 +123,11 @@ pub trait IntoEyreReport
     /// assert_eq!(printed, indoc::indoc! {"
     ///     One or more things failed
     ///     - first() failed
-    ///       at src/eyre.rs:1234:56
-    ///       at src/eyre.rs:1234:56
+    ///       at src/into_eyre.rs:1234:56
+    ///       at src/into_eyre.rs:1234:56
     ///     - This is an eyre::Report
-    ///       at src/eyre.rs:1234:56
-    ///       at src/eyre.rs:1234:56"});
+    ///       at src/into_eyre.rs:1234:56
+    ///       at src/into_eyre.rs:1234:56"});
     /// ```
     ///
     /// Note: This method discards information because it
@@ -165,7 +161,7 @@ impl<I: Display> IntoEyreReport for StashWithErrors<I>
     /// that is then passed to [`eyre::eyre!`].
     ///
     /// TODO: Improve this adapter somehow, if this is even possible.
-    /// [`color_eyre::Section`] adds `Report::error`,
+    /// `color_eyre::Section` adds `Report::error`,
     /// but that method is not suited for our purpose.
     /// Firstly, it takes the error by value.
     /// Secondly, there aren't any accessors for these errors.
