@@ -31,6 +31,8 @@ on:
     #        │ │ │ │ │
     - cron: '0 0 * * *'
 
+  workflow_dispatch:
+
 jobs:
 
   # Determine the branch names on which to run the actual jobs below.
