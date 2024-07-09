@@ -49,6 +49,7 @@ jobs:
       run: |
         case "${{ github.event_name }}" in
             "schedule") branches="[ \"main\" ]" ;;
+            "workflow_dispatch") branches="[ \"${{ github.ref }}\" ]" ;;
             *)
                 echo "Unknown event: ${{ github.event_name }}" >&2
                 exit 1
