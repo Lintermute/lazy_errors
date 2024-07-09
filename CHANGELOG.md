@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+## [`v0.7.0`] (2024-07-09)
+
 ### Breaking Changes
 
 - Replaces the optional `color_eyre` dependency with `eyre`.
@@ -130,6 +132,7 @@ Here's the details:
 
 - Initial release
 
+[`v0.7.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.7.0
 [`v0.6.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.6.0
 [`v0.5.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.5.0
 [`v0.4.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.4.0
