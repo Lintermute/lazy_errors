@@ -37,7 +37,6 @@ enum Xtask
     Version(Version),
 }
 
-#[cfg(not(tarpaulin_include))]
 fn main() -> ExitCode
 {
     match run() {
@@ -49,7 +48,6 @@ fn main() -> ExitCode
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn run() -> Result<()>
 {
     let command = parse_args_from_env()?;
@@ -60,7 +58,6 @@ fn run() -> Result<()>
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 fn parse_args_from_env() -> Result<Xtask>
 {
     parse_args(std::env::args_os())
