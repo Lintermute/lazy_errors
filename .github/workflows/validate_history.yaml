@@ -65,6 +65,7 @@ jobs:
 
         git rebase
         --root
+        --rebase-merges
         --exec 'cargo install --path xtask'
         --exec 'xtask ci --skip-moving-targets'
 
@@ -72,6 +73,7 @@ jobs:
 
         git rebase
         3705cd01e514bb3252eba6f4f69ec61168e141a3
+        --rebase-merges
         --exec 'cargo install --path xtask'
         --exec 'xtask ci all --skip-moving-targets'
 
@@ -84,5 +86,6 @@ jobs:
 
         git rebase
         57cc064646a878328324122dc7c00fd44fd2cc35
+        --rebase-merges
         --exec 'cargo install --path xtask'
         --exec 'xtask ci all --skip-moving-targets'
