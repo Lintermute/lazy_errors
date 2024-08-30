@@ -80,6 +80,8 @@ jobs:
 
     - name: Check remaining commits on ${{ matrix.branch }} (stable Rust)
       run: >
+        git checkout ${{ github.sha }}
+
         git rebase
         57cc064646a878328324122dc7c00fd44fd2cc35
         --exec 'cargo install --path xtask'
