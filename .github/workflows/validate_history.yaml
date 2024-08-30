@@ -16,6 +16,8 @@ on:
     #        │ │ │ │ │
     - cron: '0 0 * * MON'
 
+  workflow_dispatch:
+
 jobs:
   check_each_commit:
     name: check each commit
