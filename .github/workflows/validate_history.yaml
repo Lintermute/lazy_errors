@@ -16,10 +16,12 @@ on:
     #        │ │ │ │ │
     - cron: '0 0 * * MON'
 
+  workflow_dispatch:
+
 jobs:
   check_each_commit:
     name: check each commit
-    timeout-minutes: 60
+    timeout-minutes: 240
     runs-on: ${{ matrix.system }}
 
     strategy:
@@ -43,29 +45,47 @@ jobs:
         ref: ${{ matrix.branch }}
         fetch-depth: 0
 
-    - name: Install stable Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
+    # Rust 1.80 removed support of the `tarpaulin_include` attribute,
+    # so commit `57cc064` and before only work with Rust 1.79.
+    - name: Install 1.79 Rust toolchain
+      uses: dtolnay/rust-toolchain@1.79
 
     - name: Install cargo-hack
       uses: taiki-e/install-action@v2
       with:
         tool: cargo-hack
 
-
-    # Oops, I changed the API of the xtask package...
+    # Oops, I changed the API of the xtask package after commit `3705cd0`...
     #
     # FIXME: `xtask ci` may run `cargo build`, overwriting its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
-    - name: Check each commit on ${{ matrix.branch }}
+    - name: Check old commits on ${{ matrix.branch }} (Rust 1.79)
       run: >
         git checkout 3705cd01e514bb3252eba6f4f69ec61168e141a3
 
         git rebase
         --root
+        --rebase-merges
         --exec 'cargo install --path xtask'
         --exec 'xtask ci --skip-moving-targets'
 
+        git checkout 57cc064646a878328324122dc7c00fd44fd2cc35
+
         git rebase
         3705cd01e514bb3252eba6f4f69ec61168e141a3
+        --rebase-merges
+        --exec 'cargo install --path xtask'
+        --exec 'xtask ci all --skip-moving-targets'
+
+    - name: Install stable Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Check remaining commits on ${{ matrix.branch }} (stable Rust)
+      run: >
+        git checkout ${{ github.sha }}
+
+        git rebase
+        57cc064646a878328324122dc7c00fd44fd2cc35
+        --rebase-merges
         --exec 'cargo install --path xtask'
         --exec 'xtask ci all --skip-moving-targets'
