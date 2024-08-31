@@ -9,6 +9,13 @@ updates:
     schedule:
       interval: "daily"
     versioning-strategy: lockfile-only
+    # Dependabot can only handle direct dependencies in `Cargo.toml`,
+    # but not transitive ones that are only part of `Cargo.lock`.
+    # When a direct dependency needs an update, Dependabot will create a PR
+    # that does _not_ update transitive dependencies. Since the PR
+    # may have an outdated `Cargo.lock`, the build will fail.
+    # Thus, we disable Dependabot for Cargo here until Dependabot is fixed.
+    open-pull-requests-limit: 0
 
   - package-ecosystem: "github-actions"
     directory: "/"
