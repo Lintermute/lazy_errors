@@ -1,6 +1,14 @@
 # This workflow is triggered on schedule and will check the primary branch(es)
 # of this repository for whether dependencies are secure, up-to-date, and
-# whether the build still succeeds with an up-to-date Cargo.lock.
+# whether the build succeeds both with the checked-in `Cargo.lock`,
+# was well as after running `cargo update`.
+#
+# Using the checked-in `Cargo.lock` ensures that
+# local checkouts of this repository still build.
+# Using an updated `Cargo.lock` ensures that this crate can still be built
+# when it is used as a dependency: in that case, Cargo will resolve
+# dependencies of this crate in a semver-compatible way, based on
+# the entire set of dependencies of the project depending on this crate.
 #
 # The pipeline may fail for several reasons, such as:
 #
@@ -97,6 +105,7 @@ jobs:
       matrix:
         system: [ ubuntu-latest, windows-latest, macos-latest ]
         branch: ${{ fromJson(needs.init.outputs.branches) }}
+        cargo_update: [ false, true ]
 
     steps:
 
@@ -124,6 +133,7 @@ jobs:
 
     - name: Update dependencies in Cargo.lock
       run: cargo update
+      if: ${{ matrix.cargo_update }}
 
     # FIXME: `xtask ci miri` runs `cargo clean`, deleting its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
@@ -145,6 +155,7 @@ jobs:
         system: [ ubuntu-latest, windows-latest, macos-latest ]
         branch: ${{ fromJson(needs.init.outputs.branches) }}
         profile: [ dev, release ]
+        cargo_update: [ false, true ]
 
     steps:
 
@@ -163,6 +174,7 @@ jobs:
 
     - name: Update dependencies in Cargo.lock
       run: cargo update
+      if: ${{ matrix.cargo_update }}
 
     # FIXME: `xtask ci build` tries to overwrite its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
