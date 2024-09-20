@@ -113,11 +113,3 @@ jobs:
         cargo publish
         --package lazy_errors
         --token ${{ secrets.CRATES_IO_API_TOKEN }}
-
-    # TODO: When the changelog generation process is automated,
-    # stop attaching the entire file and instead just use the _new_ part
-    # as parameter for `body` or `body_path`.
-    - name: Create GitHub release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: CHANGELOG.md
