@@ -1,12 +1,16 @@
 //! Exports traits and _aliased_ types to support the most common use-cases
-//! (when `std` and/or `core::error::Error` is _not_ available).
+//! (when neither `core::error::Error` nor `std` are available).
 //!
-//! In `#![no_std]` builds, `std::error::Error` is not available.
-//! In Rust versions before 1.81, `core::error::Error` is not available.
-//! Otherwise, consider enabling the `std` feature
-//! which makes the `lazy_errors::prelude::*` available.
+//! In Rust versions before v1.81, `core::error::Error` is not stable.
+//! In `#![no_std]` builds before Rust v1.81,
+//! `std::error::Error` is not available either.
+//! This prelude exports the surrogate error trait [`Reportable`] and
+//! type aliases that can be used in these cases.
+//! Consider using Rust v1.81 or newer, or (if that's not possible)
+//! consider enabling the `std` feature. Doing either makes
+//! the “regular” `lazy_errors::prelude::*` available.
 //! Types exported from the “regular” prelude
-//! have better intercompatibility with other crates.
+//! are compatible with other crates.
 //!
 //! When using any container from `lazy_errors`, such as [`lazy_errors::Error`]
 //! or [`lazy_errors::ErrorStash`], you usually don't want to specify the
@@ -18,12 +22,12 @@
 //!
 //! Usually, anything that you want to treat as an error can be boxed
 //! into a `lazy_errors::Stashable`.
-//! When you don't want to introduce a dependency on `std`
-//! (or when `core::error::Error` is not available),
+//! When `core::error::Error` is not available and
+//! you don't want to introduce a dependency on `std`,
 //! you need an alternative to `lazy_errors::Stashable`.
 //! [`Reportable`] is a surrogate for `std::error::Error`/`core::error::Error`.
 //! [`lazy_errors::surrogate_error_trait::Stashable`] is for
-//! [`Reportable`] what `Stashable` is for `std::error::Error`.
+//! [`Reportable`] what `lazy_errors::Stashable` is for `core::error::Error`.
 //! Also, using the `'static` bound for the trait object usually works fine.
 //! Thus, `Stashable<'static>` is the [_inner error type_ `I`] for all
 //! container type aliases exported by this prelude. We also define and export

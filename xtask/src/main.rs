@@ -16,10 +16,12 @@ mod ci;
 mod version;
 
 use core::str;
+
 use std::process::{self, ExitCode, Stdio};
 
-use ci::Ci;
 use lazy_errors::{prelude::*, Result};
+
+use ci::Ci;
 use version::Version;
 
 type CommandLine = Vec<&'static str>;
@@ -153,7 +155,7 @@ fn str_or_stash<'a, F, M>(
 ) -> &'a str
 where
     F: FnOnce() -> M,
-    M: std::fmt::Display,
+    M: core::fmt::Display,
 {
     str::from_utf8(bytes)
         .map(str::trim)

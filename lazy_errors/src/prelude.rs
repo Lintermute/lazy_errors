@@ -1,5 +1,4 @@
-//! Exports traits and _aliased_ types to support the most common use-cases
-//! (when depending on `std`).
+//! Exports traits and _aliased_ types to support the most common use-cases.
 //!
 //! When using any container from `lazy_errors`, such as [`lazy_errors::Error`]
 //! or [`lazy_errors::ErrorStash`], you usually don't want to specify the
@@ -21,9 +20,14 @@
 //! the container and wrapper types from this library directly. In that case,
 //! please check out [the example in the crate root documentation][CUSTOM].
 //!
+//! If you're using a Rust version older than v1.81 _and_
+//! don't enable the `std` feature, you need to use
+//! the [`surrogate_error_trait::prelude`] instead.
+//!
 //! [`lazy_errors::Error`]: crate::Error
 //! [`lazy_errors::ErrorStash`]: crate::ErrorStash
 //! [`lazy_errors::Stashable`]: crate::Stashable
+//! [`surrogate_error_trait::prelude`]: crate::surrogate_error_trait::prelude
 //! [_inner error type_ `I`]: crate::Error#inner-error-type-i
 //! [CUSTOM]: crate#example-custom-error-types
 

@@ -9,14 +9,14 @@ use crate::Error;
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
 /// typically [`prelude::Stashable`].
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 
 [`prelude::Stashable`]: crate::prelude::Stashable
 "##
 )]
 #[cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
@@ -36,10 +36,10 @@ pub trait OrWrap<T, E>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run(tokens: &[&str]) -> Result<(), Error>
@@ -74,13 +74,13 @@ pub trait OrWrap<T, E>
     /// [`WrappedError`]: crate::WrappedError
     /// [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
     #[cfg_attr(
-        feature = "std",
+        any(feature = "rust-v1.81", feature = "std"),
         doc = r##"
 [`prelude::Stashable`]: crate::prelude::Stashable
 "##
     )]
     #[cfg_attr(
-        not(feature = "std"),
+        not(any(feature = "rust-v1.81", feature = "std")),
         doc = r##"
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
 "##

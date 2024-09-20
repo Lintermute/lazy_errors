@@ -4,6 +4,21 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- Uses `core::error::Error` by default now (instead of `std::error::Error`)
+  - Adds the `rust-v1.81` feature (enabled by default)
+    because `core::error::Error` is stable only since Rust v1.81
+  - Disables the `std` feature by default
+    because it is not needed anymore since Rust v1.81
+  - This is NOT a breaking change if you're using Rust v1.81 or later
+  - You also DON'T need to change your code if you've been using `no_std`
+    (i.e. types exported via the `surrogate_error_trait` module),
+    regardless of the Rust toolchain version you're using
+  - If you're using a Rust toolchain older than v1.81, please disable
+    the `rust-v1.81` feature and either enable the `std` feature or use
+    types from the `surrogate_error_trait` module
+
 ## [`v0.7.0`] (2024-07-09)
 
 ### Breaking Changes

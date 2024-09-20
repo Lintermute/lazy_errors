@@ -1,21 +1,21 @@
 //! Alternatives to types based on
 //! `std::error::Error`/`core::error::Error`.
 //!
-//! Anything in this module and submodules should only be used if
-//! `std` and/or `core::error::Error` are not available.
-//! In that case, it's usually sufficient to import
-//! [`lazy_errors::surrogate_error_trait::prelude::*`](prelude).
-//!
-//! When you're using `std` or `error_in_core`,
-//! i.e. when `std::error::Error`/`core::error::Error` is available,
+//! When you're using the Rust v1.81 (or later)
+//! or when you've enabled the `std` feature,
 //! there should be no need to use anything from this module.
 //! However,
-//! in `#![no_std]` builds, `std::error::Error` is not available.
-//! In Rust versions before 1.81, `core::error::Error` is not available.
-//! In those cases, you need an alternative to `lazy_errors::Stashable`.
+//! in Rust versions before 1.81, `core::error::Error` is not available.
+//! If you don't enable the `std` feature in that case,
+//! `std::error::Error` won't be either.
+//! Thus, you'd need an alternative to `lazy_errors::Stashable`.
 //! [`Reportable`] is a surrogate for `std::error::Error`/`core::error::Error`
 //! and [`lazy_errors::surrogate_error_trait::Stashable`] is for [`Reportable`]
-//! what `lazy_errors::Stashable` is for `std::error::Error`.
+//! what `lazy_errors::Stashable` is for `core::error::Error`.
+//!
+//! It's usually sufficient to import
+//! [`lazy_errors::surrogate_error_trait::prelude::*`](prelude) and
+//! [`lazy_errors::surrogate_error_trait::Result`](Result).
 //!
 //! [`lazy_errors::Error`]: crate::Error
 //! [`lazy_errors::ErrorStash`]: crate::ErrorStash
@@ -32,7 +32,7 @@ use crate::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 
 /// Marker trait for types that can be put into [`ErrorStash`]
 /// and other containers of this crate
-/// when `std` and/or `core::error::Error` are not available.
+/// when both `std` and `core::error::Error` are not available.
 ///
 /// By default, this trait is referenced in exactly one place: [`Stashable`].
 /// By implementing this trait for your custom type, you will be able to
@@ -109,9 +109,9 @@ pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 ///
 /// This type is only used when you're using the type aliases from the
 /// [`surrogate_error_trait::prelude`](prelude), which you probably
-/// should only do when `std` and/or `core::error::Error` are not available.
+/// should only do when both `std` and `core::error::Error` are not available.
 ///
-/// When `std` and/or the `core::error::Error` trait are not available,
+/// When both `std` and the `core::error::Error` trait are not available,
 /// we need to fall back on some other trait.
 /// We defined the [`Reportable`] trait for that purpose.
 /// If you want to use this crate to handle custom error types,
@@ -121,7 +121,7 @@ pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 /// [makes errors usable with `thread::spawn` and `task::spawn`][1].
 ///
 /// The [`Sync`] trait bound is present because
-/// `Stashable` from the `std` prelude (`lazy_errors::prelude`)
+/// `Stashable` from the “regular” prelude (`lazy_errors::prelude`)
 /// needs the [`Sync`] bound itself.
 /// By making the these two types share the same auto-trait bounds,
 /// `lazy_errors` can be used identically in `std`/`no_std` configuration.
@@ -130,19 +130,19 @@ pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 ///
 /// [1]: https://github.com/dtolnay/anyhow/issues/81
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 ```
-use lazy_errors::prelude as lazy_errors_std;
-use lazy_errors::surrogate_error_trait::prelude as lazy_errors_no_std;
+use lazy_errors::prelude as lazy_errors_regular;
+use lazy_errors::surrogate_error_trait::prelude as lazy_errors_surrogate;
 
-let std_error = lazy_errors_std::Error::from_message("");
-let no_std_error = lazy_errors_no_std::Error::from_message("");
-let mut std_stash = lazy_errors_std::ErrorStash::new(|| "");
-let mut no_std_stash = lazy_errors_no_std::ErrorStash::new(|| "");
+let regular_error = lazy_errors_regular::Error::from_message("");
+let surrogate_error = lazy_errors_surrogate::Error::from_message("");
+let mut regular_stash = lazy_errors_regular::ErrorStash::new(|| "");
+let mut surrogate_stash = lazy_errors_surrogate::ErrorStash::new(|| "");
 
-std_stash.push(no_std_error);
-no_std_stash.push(std_error);
+regular_stash.push(surrogate_error);
+surrogate_stash.push(regular_error);
 ```
 "##
 )]
