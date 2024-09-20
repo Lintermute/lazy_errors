@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+## [`v0.8.0`] (2024-09-20)
+
 ### Breaking Changes
 
 - Uses `core::error::Error` by default now (instead of `std::error::Error`)
@@ -147,6 +149,7 @@ Here's the details:
 
 - Initial release
 
+[`v0.8.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.8.0
 [`v0.7.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.7.0
 [`v0.6.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.6.0
 [`v0.5.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.5.0
