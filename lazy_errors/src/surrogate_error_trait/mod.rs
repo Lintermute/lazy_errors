@@ -47,17 +47,13 @@ use crate::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 /// #[derive(Debug)]
 /// struct MyType;
 ///
-/// impl Display for MyType
-/// {
-///     fn fmt(&self, f: &mut Formatter<'_>) -> Result
-///     {
+/// impl Display for MyType {
+///     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
 ///         write!(f, "MyType")
 ///     }
 /// }
 ///
-/// impl Reportable for MyType
-/// {
-/// }
+/// impl Reportable for MyType {}
 ///
 /// let mut errs = ErrorStash::new(|| "Error summary");
 /// errs.push(MyType);
@@ -76,10 +72,8 @@ use crate::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 ///
 /// struct MyExpensiveType;
 ///
-/// impl From<MyExpensiveType> for Stashable
-/// {
-///     fn from(val: MyExpensiveType) -> Stashable
-///     {
+/// impl From<MyExpensiveType> for Stashable {
+///     fn from(val: MyExpensiveType) -> Stashable {
 ///         Box::new(String::from("Summary of data in MyType"))
 ///         // Drop MyExpensiveType now, e.g. to free memory
 ///     }
@@ -91,9 +85,7 @@ use crate::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 ///
 /// [`ErrorStash`]: prelude::ErrorStash
 /// [`Stashable`]: prelude::Stashable
-pub trait Reportable: Display + Debug
-{
-}
+pub trait Reportable: Display + Debug {}
 
 /// Alias of the `Result<T, E>` we all know, but uses
 /// [`lazy_errors::surrogate_error_trait::prelude::Error`]
@@ -155,10 +147,10 @@ pub type Stashable<'a> =
 /// `Into<Box<dyn Reportable>>`,
 /// so that they satisfy the `E: Into<I>` constraint used throughout this crate.
 impl<'a, E> From<E> for Box<dyn Reportable + 'a>
-where E: Reportable + 'a
+where
+    E: Reportable + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -167,10 +159,10 @@ where E: Reportable + 'a
 /// `Into<Box<dyn Reportable + Send>>` if possible,
 /// so that they satisfy the `E: Into<I>` constraint used throughout this crate.
 impl<'a, E> From<E> for Box<dyn Reportable + Send + 'a>
-where E: Reportable + Send + 'a
+where
+    E: Reportable + Send + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -179,10 +171,10 @@ where E: Reportable + Send + 'a
 /// `Into<Box<dyn Reportable + Sync>>` if possible,
 /// so that they satisfy the `E: Into<I>` constraint used throughout this crate.
 impl<'a, E> From<E> for Box<dyn Reportable + Sync + 'a>
-where E: Reportable + Sync + 'a
+where
+    E: Reportable + Sync + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
@@ -191,145 +183,81 @@ where E: Reportable + Sync + 'a
 /// `Into<Box<dyn Reportable + Send + Sync>>` if possible,
 /// so that they satisfy the `E: Into<I>` constraint used throughout this crate.
 impl<'a, E> From<E> for Box<dyn Reportable + Send + Sync + 'a>
-where E: Reportable + Send + Sync + 'a
+where
+    E: Reportable + Send + Sync + 'a,
 {
-    fn from(val: E) -> Self
-    {
+    fn from(val: E) -> Self {
         Box::new(val)
     }
 }
 
-impl<I> Reportable for Error<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for Error<I> where I: Display + Debug {}
 
-impl<I> Reportable for ErrorData<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for ErrorData<I> where I: Display + Debug {}
 
-impl<I> Reportable for StashedErrors<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for StashedErrors<I> where I: Display + Debug {}
 
-impl<I> Reportable for WrappedError<I> where I: Display + Debug
-{
-}
+impl<I> Reportable for WrappedError<I> where I: Display + Debug {}
 
-impl Reportable for AdHocError
-{
-}
+impl Reportable for AdHocError {}
 
-impl Reportable for alloc::string::String
-{
-}
+impl Reportable for alloc::string::String {}
 
-impl Reportable for &str
-{
-}
+impl Reportable for &str {}
 
-impl Reportable for core::convert::Infallible
-{
-}
+impl Reportable for core::convert::Infallible {}
 
-impl Reportable for core::alloc::LayoutError
-{
-}
+impl Reportable for core::alloc::LayoutError {}
 
-impl Reportable for core::array::TryFromSliceError
-{
-}
+impl Reportable for core::array::TryFromSliceError {}
 
-impl Reportable for core::cell::BorrowError
-{
-}
+impl Reportable for core::cell::BorrowError {}
 
-impl Reportable for core::cell::BorrowMutError
-{
-}
+impl Reportable for core::cell::BorrowMutError {}
 
-impl Reportable for core::char::CharTryFromError
-{
-}
+impl Reportable for core::char::CharTryFromError {}
 
-impl Reportable for core::char::DecodeUtf16Error
-{
-}
+impl Reportable for core::char::DecodeUtf16Error {}
 
-impl Reportable for core::char::ParseCharError
-{
-}
+impl Reportable for core::char::ParseCharError {}
 
-impl Reportable for core::char::TryFromCharError
-{
-}
+impl Reportable for core::char::TryFromCharError {}
 
-impl Reportable for alloc::collections::TryReserveError
-{
-}
+impl Reportable for alloc::collections::TryReserveError {}
 
 #[cfg(feature = "rust-v1.69")]
-impl Reportable for core::ffi::FromBytesUntilNulError
-{
-}
+impl Reportable for core::ffi::FromBytesUntilNulError {}
 
 #[cfg(feature = "rust-v1.64")]
-impl Reportable for core::ffi::FromBytesWithNulError
-{
-}
+impl Reportable for core::ffi::FromBytesWithNulError {}
 
 #[cfg(feature = "rust-v1.64")]
-impl Reportable for alloc::ffi::FromVecWithNulError
-{
-}
+impl Reportable for alloc::ffi::FromVecWithNulError {}
 
 #[cfg(feature = "rust-v1.64")]
-impl Reportable for alloc::ffi::IntoStringError
-{
-}
+impl Reportable for alloc::ffi::IntoStringError {}
 
 #[cfg(feature = "rust-v1.64")]
-impl Reportable for alloc::ffi::NulError
-{
-}
+impl Reportable for alloc::ffi::NulError {}
 
-impl Reportable for core::fmt::Error
-{
-}
+impl Reportable for core::fmt::Error {}
 
 #[cfg(feature = "rust-v1.77")]
-impl Reportable for core::net::AddrParseError
-{
-}
+impl Reportable for core::net::AddrParseError {}
 
-impl Reportable for core::num::ParseFloatError
-{
-}
+impl Reportable for core::num::ParseFloatError {}
 
-impl Reportable for core::num::ParseIntError
-{
-}
+impl Reportable for core::num::ParseIntError {}
 
-impl Reportable for core::num::TryFromIntError
-{
-}
+impl Reportable for core::num::TryFromIntError {}
 
-impl Reportable for core::str::ParseBoolError
-{
-}
+impl Reportable for core::str::ParseBoolError {}
 
-impl Reportable for core::str::Utf8Error
-{
-}
+impl Reportable for core::str::Utf8Error {}
 
-impl Reportable for alloc::string::FromUtf8Error
-{
-}
+impl Reportable for alloc::string::FromUtf8Error {}
 
-impl Reportable for alloc::string::FromUtf16Error
-{
-}
+impl Reportable for alloc::string::FromUtf16Error {}
 
 #[cfg(feature = "rust-v1.66")]
-impl Reportable for core::time::TryFromFloatSecsError
-{
-}
+impl Reportable for core::time::TryFromFloatSecsError {}

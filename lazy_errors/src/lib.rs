@@ -12,8 +12,7 @@
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn run(input1: &str, input2: &str) -> Result<()>
-//! {
+//! fn run(input1: &str, input2: &str) -> Result<()> {
 //!     let mut errs = ErrorStash::new(|| "There were one or more errors");
 //!
 //!     u8::from_str("42").or_stash(&mut errs); // `errs` contains 0 errors
@@ -36,8 +35,7 @@
 //!     errs.into() // `Ok(())` if `errs` is still empty, `Err` otherwise
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run("❓", "❗").unwrap_err();
 //!     let n = err.children().len();
 //!     eprintln!("Got an error with {n} children.");
@@ -190,8 +188,7 @@
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn run() -> Result<()>
-//! {
+//! fn run() -> Result<()> {
 //!     let mut stash = ErrorStash::new(|| "Failed to run application");
 //!
 //!     print_if_ascii("❓").or_stash(&mut stash);
@@ -203,8 +200,7 @@
 //!     stash.into() // `Ok(())` if the stash was still empty
 //! }
 //!
-//! fn print_if_ascii(text: &str) -> Result<()>
-//! {
+//! fn print_if_ascii(text: &str) -> Result<()> {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
 //!     }
@@ -213,13 +209,11 @@
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<()>
-//! {
+//! fn cleanup() -> Result<()> {
 //!     Err(err!("Cleanup failed"))
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -273,32 +267,28 @@
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn run() -> Result<()>
-//! {
+//! fn run() -> Result<()> {
 //!     match write("❌").or_create_stash(|| "Failed to run application") {
 //!         Ok(()) => Ok(()),
 //!         Err(mut stash) => {
 //!             cleanup().or_stash(&mut stash);
 //!             Err(stash.into())
-//!         },
+//!         }
 //!     }
 //! }
 //!
-//! fn write(text: &str) -> Result<()>
-//! {
+//! fn write(text: &str) -> Result<()> {
 //!     if !text.is_ascii() {
 //!         return Err(err!("Input is not ASCII: '{text}'"));
 //!     }
 //!     Ok(())
 //! }
 //!
-//! fn cleanup() -> Result<()>
-//! {
+//! fn cleanup() -> Result<()> {
 //!     Err(err!("Cleanup failed"))
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -387,23 +377,20 @@ fn main()
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn parent() -> Result<()>
-//! {
+//! fn parent() -> Result<()> {
 //!     let mut stash = ErrorStash::new(|| "In parent(): child() failed");
 //!     stash.push(child().unwrap_err());
 //!     stash.into()
 //! }
 //!
-//! fn child() -> Result<()>
-//! {
+//! fn child() -> Result<()> {
 //!     let mut stash = ErrorStash::new(|| "In child(): There were errors");
 //!     stash.push("First error");
 //!     stash.push("Second error");
 //!     stash.into()
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = parent().unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -438,13 +425,11 @@ fn main()
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn run(s: &str) -> Result<u32>
-//! {
+//! fn run(s: &str) -> Result<u32> {
 //!     parse(s).or_wrap_with(|| format!("Not an u32: '{s}'"))
 //! }
 //!
-//! fn parse(s: &str) -> Result<u32>
-//! {
+//! fn parse(s: &str) -> Result<u32> {
 //!     let r: Result<u32, core::num::ParseIntError> = s.parse();
 //!
 //!     // Wrap the error type “silently”:
@@ -452,8 +437,7 @@ fn main()
 //!     r.or_wrap()
 //! }
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run("❌").unwrap_err();
 //!     let printed = format!("{err:#}");
 //!     let printed = replace_line_numbers(&printed);
@@ -585,8 +569,7 @@ are compatible with other crates.
 //! use lazy_errors::surrogate_error_trait::Stashable;
 //!
 //! #[derive(thiserror::Error, Debug)]
-//! pub enum CustomError<'a>
-//! {
+//! pub enum CustomError<'a> {
 //!     #[error("Input is empty")]
 //!     EmptyInput,
 //!
@@ -600,14 +583,12 @@ are compatible with other crates.
 //! // Allow using `CustomError` as `I` but use `Stashable` by default:
 //! pub type Error<I = Stashable<'static>> = lazy_errors::Error<I>;
 //!
-//! fn main()
-//! {
+//! fn main() {
 //!     let err = run(&["42", "0xA", "f", "oobar", "3b"]).unwrap_err();
 //!     eprintln!("{err:#}");
 //! }
 //!
-//! fn run<'a>(input: &[&'a str]) -> Result<(), Error<Stashable<'a>>>
-//! {
+//! fn run<'a>(input: &[&'a str]) -> Result<(), Error<Stashable<'a>>> {
 //!     let mut errs = ErrorStash::new(|| "Application failed");
 //!
 //!     let parser_result = parse(input); // Soft errors
@@ -627,8 +608,7 @@ are compatible with other crates.
 //!     errs.into()
 //! }
 //!
-//! fn parse<'a>(input: &[&'a str]) -> Result<(), Error<CustomError<'a>>>
-//! {
+//! fn parse<'a>(input: &[&'a str]) -> Result<(), Error<CustomError<'a>>> {
 //!     if input.is_empty() {
 //!         return Err(Error::wrap(CustomError::EmptyInput));
 //!     }
@@ -658,8 +638,7 @@ are compatible with other crates.
 //!     errs.into() // Return list of all parser errors, if any
 //! }
 //!
-//! fn handle_parser_errors(errs: &Error<CustomError>) -> Result<(), Error>
-//! {
+//! fn handle_parser_errors(errs: &Error<CustomError>) -> Result<(), Error> {
 //!     println!("Step #2: Starting...");
 //!
 //!     for e in errs.children() {
@@ -674,25 +653,23 @@ are compatible with other crates.
 //!     Ok(())
 //! }
 //!
-//! fn parse_u32(s: &str) -> Result<u32, CustomError>
-//! {
+//! fn parse_u32(s: &str) -> Result<u32, CustomError> {
 //!     s.strip_prefix("0x")
 //!         .map(|hex| u32::from_str_radix(hex, 16))
 //!         .unwrap_or_else(|| u32::from_str(s))
 //!         .map_err(|_| CustomError::NotU32(s))
 //! }
 //!
-//! fn guess_hex(s: &str) -> Result<u32, Error>
-//! {
+//! fn guess_hex(s: &str) -> Result<u32, Error> {
 //!     match u32::from_str_radix(s, 16) {
 //!         Ok(v) => {
 //!             println!("Step #2: '{s}' is not u32. Did you mean '{v:#X}'?");
 //!             Ok(v)
-//!         },
+//!         }
 //!         Err(e) => {
 //!             println!("Step #2: '{s}' is not u32. Aborting program.");
 //!             Err(err!("Unsupported input '{s}': {e}"))
-//!         },
+//!         }
 //!     }
 //! }
 //! ```
@@ -827,8 +804,7 @@ pub type StashableImpl<'a> =
 ///
 /// ⚠️ Do not use this method! ⚠️
 #[doc(hidden)]
-pub fn doctest_line_num_helper(text: &str) -> alloc::string::String
-{
+pub fn doctest_line_num_helper(text: &str) -> alloc::string::String {
     // We need to call this method from the doctests.
     // Using a regex would require us to add the regex crate
     // as dependency in general.

@@ -10,8 +10,7 @@
 /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 ///
-/// fn parse_version(s: &str) -> Result<(u32, u32)>
-/// {
+/// fn parse_version(s: &str) -> Result<(u32, u32)> {
 ///     let mut errs = ErrorStash::new(|| "Invalid version");
 ///
 ///     // If `parts` does not contain exactly two elements, return right now.
@@ -70,7 +69,7 @@ macro_rules! try2 {
             $crate::StashedResult::Ok(val) => val,
             $crate::StashedResult::Err(errs) => {
                 return core::result::Result::Err(errs.take().into());
-            },
+            }
         }
     };
 }

@@ -47,13 +47,7 @@
 //! [CUSTOM]: crate#example-custom-error-types
 
 pub use crate::{
-    err,
-    try2,
-    OrCreateStash,
-    OrStash,
-    OrWrap,
-    OrWrapWith,
-    StashedResult,
+    err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashedResult,
 };
 
 /// Type alias for [`crate::ErrorStash`]

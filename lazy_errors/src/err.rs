@@ -36,8 +36,7 @@ the `std` features is enabled).
 /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::{err, surrogate_error_trait::Result};
 ///
-/// fn handle_ascii(text: &str) -> Result<()>
-/// {
+/// fn handle_ascii(text: &str) -> Result<()> {
 ///     if !text.is_ascii() {
 ///         return Err(err!("Not ASCII: '{text}'"));
 ///     }

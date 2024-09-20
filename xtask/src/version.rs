@@ -6,16 +6,14 @@ use core::{
 use lazy_errors::{prelude::*, Result};
 
 #[derive(clap::Subcommand, Debug, Clone, PartialEq, Hash, Eq)]
-pub enum Version
-{
+pub enum Version {
     /// Extracts the version number from some source
     /// and writes it into the `Cargo.toml` and `Cargo.lock` files.
     Import(ImportArgs),
 }
 
 #[derive(clap::Args, Debug, Clone, PartialEq, Hash, Eq)]
-pub struct ImportArgs
-{
+pub struct ImportArgs {
     /// Where to import the version number from.
     source: Source,
 
@@ -30,30 +28,26 @@ pub struct ImportArgs
 }
 
 #[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-enum Source
-{
+enum Source {
     /// Use the string returned from `git describe --dirty` as version number.
     GitDescribe,
 }
 
 #[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
-enum Pattern
-{
+enum Pattern {
     /// Matches a “regular” version number,
     /// i.e. `MAJOR.MINOR.PATCH` strings if all parts are decimal numbers.
     MajorMinorPatch,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Eq)]
-enum VersionNumber
-{
+enum VersionNumber {
     MajorMinorPatch(MajorMinorPatch),
     CustomVersion(CustomVersion),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Hash, Eq, Ord)]
-struct MajorMinorPatch
-{
+struct MajorMinorPatch {
     major: u16,
     minor: u16,
     patch: u16,
@@ -62,12 +56,10 @@ struct MajorMinorPatch
 #[derive(Debug, Clone, PartialEq, PartialOrd, Hash, Eq, Ord)]
 struct CustomVersion(String);
 
-impl FromStr for VersionNumber
-{
+impl FromStr for VersionNumber {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self>
-    {
+    fn from_str(s: &str) -> Result<Self> {
         if let Ok(v) = MajorMinorPatch::from_str(s) {
             return Ok(VersionNumber::MajorMinorPatch(v));
         }
@@ -76,12 +68,10 @@ impl FromStr for VersionNumber
     }
 }
 
-impl FromStr for MajorMinorPatch
-{
+impl FromStr for MajorMinorPatch {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self>
-    {
+    fn from_str(s: &str) -> Result<Self> {
         let mut errs = ErrorStash::new(|| {
             format!("Doesn't match MAJOR.MINOR.PATCH: '{s}'")
         });
@@ -112,12 +102,10 @@ impl FromStr for MajorMinorPatch
     }
 }
 
-impl FromStr for CustomVersion
-{
+impl FromStr for CustomVersion {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self>
-    {
+    fn from_str(s: &str) -> Result<Self> {
         let s = s.trim();
 
         if s.is_empty() {
@@ -128,10 +116,8 @@ impl FromStr for CustomVersion
     }
 }
 
-impl Display for VersionNumber
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
+impl Display for VersionNumber {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             VersionNumber::MajorMinorPatch(v) => Display::fmt(v, f),
             VersionNumber::CustomVersion(v) => Display::fmt(v, f),
@@ -139,10 +125,8 @@ impl Display for VersionNumber
     }
 }
 
-impl Display for MajorMinorPatch
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
+impl Display for MajorMinorPatch {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let major = self.major;
         let minor = self.minor;
         let patch = self.patch;
@@ -151,23 +135,19 @@ impl Display for MajorMinorPatch
     }
 }
 
-impl Display for CustomVersion
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
-    {
+impl Display for CustomVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-pub fn run(command: &Version) -> Result<()>
-{
+pub fn run(command: &Version) -> Result<()> {
     match command {
         Version::Import(args) => run_import(args),
     }
 }
 
-fn run_import(args: &ImportArgs) -> Result<()>
-{
+fn run_import(args: &ImportArgs) -> Result<()> {
     let version = crate::exec_and_capture(&["git", "describe", "--dirty"])?;
     let version = version_from_git_describe(&version)?;
 
@@ -178,7 +158,7 @@ fn run_import(args: &ImportArgs) -> Result<()>
             .any(|accept| match accept {
                 Pattern::MajorMinorPatch => {
                     matches!(version, VersionNumber::MajorMinorPatch(_))
-                },
+                }
             });
 
     if !is_accepted {
@@ -190,8 +170,7 @@ fn run_import(args: &ImportArgs) -> Result<()>
     crate::exec(&["cargo", "set-version", &version.to_string()])
 }
 
-fn version_from_git_describe(output: &str) -> Result<VersionNumber>
-{
+fn version_from_git_describe(output: &str) -> Result<VersionNumber> {
     if output.is_empty() {
         return Err(err!("Version number is empty"));
     }
