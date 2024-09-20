@@ -6,10 +6,10 @@
 //!
 //! ```
 //! # use core::str::FromStr;
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn run(input1: &str, input2: &str) -> Result<()>
@@ -77,10 +77,12 @@
 //! deferring returning `Err` results.
 //! `lazy_errors` allows you to return two or more errors
 //! from functions simultaneously and ergonomically.
-//! `lazy_error` also supports nested errors.
+//! `lazy_errors` also supports nested errors.
 //! When you return nested errors from functions,
 //! errors will form a tree while “bubbling up”.
 //! You can report that error tree the user/developer in its entirety.
+//! `lazy_errors` integrates with `core::error::Error`
+//! and is `#![no_std]` by default.
 //!
 //! By default, `lazy_errors` will box your error values (like `anyhow`/`eyre`),
 //! which allows you to use different error types in the same `Result` type.
@@ -90,14 +92,11 @@
 //! at run-time without needing downcasts.
 //! Both modes of operation can work together, as will be shown
 //! in the example on the bottom of the page.
-//!
-//! While `lazy_error` integrates with `std::error::Error` by default,
-//! it also supports `#![no_std]` if you disable the `std` feature.
 //! When you define a few simple type aliases,
-//! `lazy_errors` easily supports error types that aren't
+//! `lazy_errors` also easily supports custom error types that aren't
 //! `Sync` or even `Send`.
 //!
-//! Common reasons to use this crate are:
+//! Common reasons to use the `lazy_errors` crate are:
 //!
 //! - You want to return an error but run some fallible cleanup logic before.
 //! - More generally, you're calling two or more functions that return `Result`,
@@ -107,30 +106,37 @@
 //! - You want to aggregate multiple errors before running some reporting or
 //!   recovery logic, iterating over all errors collected.
 //! - You need to handle errors that don't implement
-//!   `std::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
+//!   `core::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
 //!   traits.
 //!
 //! # Feature Flags
 //!
-//! - `std`:
-//!   - Support error types that implement `std::error::Error`.
-//!   - Implement `std::error::Error` for `lazy_error` error types.
-//! - `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions.
-//! - `rust-vN` (where `N` is a Rust version number): Does nothing more than add
-//!   support for some error types from `core` and `alloc` that were stabilized
-//!   in the respective Rust version.
+//! - `std` (_disabled_ by default):
+//!   - Support any error type that implements `std::error::Error` (instead of
+//!     `core::error::Error`)
+//!   - Implement `std::error::Error` for `lazy_errors` error types (instead of
+//!     `core::error::Error`)
+//!   - Enable this flag if you're on Rust v1.80 or older (`core::error::Error`
+//!     was stabilized in Rust v1.81)
+//! - `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions
+//! - `rust-v$N` (where `$N` is a Rust version number): Add support for error
+//!   types from `core` and `alloc` that were stabilized in the respective Rust
+//!   version.
 //!
 //! # MSRV
 //!
 //! The MSRV of `lazy_errors` depends on the set of enabled features:
 //!
-//! - Rust 1.77 supports all features and combinations thereof.
-//! - Rust versions 1.61 .. 1.77 need you to disable all `rust-vN` features
-//!   where `N` is greater than the version of your Rust toolchain. For example,
-//!   to compile `lazy_errors` on Rust 1.66, you have to disable `rust-v1.77`
-//!   and `rust-v1.69`, but not `rust-v1.66`.
-//! - `eyre` needs at least Rust 1.65.
-//! - Rust versions older than 1.61 are unsupported.
+//! - Rust v1.81 and later supports all features and combinations thereof
+//! - Rust v1.61 .. v1.81 need you to disable all `rust-v$N` features where `$N`
+//!   is greater than the version of your Rust toolchain. For example, to
+//!   compile `lazy_errors` on Rust v1.69, you have to disable `rust-v1.81` and
+//!   `rust-v1.77`, but not `rust-v1.69`.
+//! - `eyre` needs at least Rust v1.65
+//! - Rust versions older than v1.61 are unsupported
+//! - In Rust versions below v1.81, `core::error::Error` is not stable yet. If
+//!   you're using a Rust version before v1.81, please consider enabling the
+//!   `std` feature to make `lazy_errors` use `std::core::Error` instead.
 //!
 //! # Walkthrough
 //!
@@ -140,14 +146,19 @@
 //! on the bottom of this page. Usually however, you'd want to use the
 //! aliased types from the [`prelude`]. When you're using these aliases,
 //! errors will be boxed and you can dynamically return groups of errors
-//! of differing types from the same function.
+//! of differing types from the same function. When you're also using
+//! the default feature flags, `lazy_errors` is `#![no_std]` and
+//! integrates with `core::error::Error`. In that case,
+//! `lazy_errors` supports any error type that implements `core::error::Error`,
+//! and all error types from this crate implement `core::error::Error` as well.
 //!
-//! The `std` feature is enabled by default, making `lazy_error` support
-//! third-party error types that implement `std::error::Error`.
-//! All error types from this crate will implement `std::error::Error` as well
-//! in that case.
-//! If you need `#![no_std]` support, you can disable the `std` feature
-//! and use the [`surrogate_error_trait::prelude`] instead.
+//! In Rust versions below v1.81, `core::error::Error` is not stable yet.
+//! If you're using an old Rust version, please disable (at least)
+//! the `rust-v1.81` feature and enable the `std` feature instead.
+//! Enabling the `std` feature will make `lazy_errors` use `std::error::Error`
+//! instead of `core::error::Error`. If you're using an old Rust version and
+//! need `#![no_std]` support nevertheless, please use the types from
+//! the [`surrogate_error_trait::prelude`] instead of the regular prelude.
 //! If you do so, `lazy_errors` will box any error type that implements the
 //! [`surrogate_error_trait::Reportable`] marker trait.
 //! If necessary, you can implement that trait for your custom types as well
@@ -173,10 +184,10 @@
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn run() -> Result<()>
@@ -256,10 +267,10 @@
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn run() -> Result<()>
@@ -370,10 +381,10 @@ fn main()
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn parent() -> Result<()>
@@ -421,10 +432,10 @@ fn main()
 //!
 //! ```
 //! # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::{prelude::*, Result};
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
 //! fn run(s: &str) -> Result<u32>
@@ -459,10 +470,10 @@ fn main()
 //! and turn it into an ad-hoc [`Error`] at the same time:
 //!
 //! ```
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::prelude::*;
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::prelude::*;
 //!
 //! let pid = 42;
@@ -470,35 +481,40 @@ fn main()
 //! ```
 //!
 //! You'll often find ad-hoc errors to be the leaves in an error tree.
-//! However, the error tree can have almost any _inner error type_ as leaf.
+//! However, the error tree can have almost any
+//! [_inner error type_](Error#inner-error-type-i) as leaf.
 //!
 //! ### Supported Error Types
 #![cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 
-The [`prelude`] module exports commonly used traits and _aliased_ types.
-Importing `lazy_errors::prelude::*` should set you up for most use-cases.
+The [`prelude`] module
+exports commonly used traits and _aliased_ types.
+Importing `lazy_errors::prelude::*`
+should set you up for most use-cases.
 You may also want to import [`lazy_errors::Result`](crate::Result).
-In `![no_std]` mode or when `core::error::Error` is not available,
+When `core::error::Error` is not available
+(i.e. in `![no_std]` mode before Rust v1.81),
 you can import the [`surrogate_error_trait::prelude`] instead, and use
 the corresponding [`lazy_errors::surrogate_error_trait::Result`].
 
  "##
 )]
 #![cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 
-The [`surrogate_error_trait::prelude`] module exports commonly used traits
-and _aliased_ types.
-Importing `lazy_errors::surrogate_error_trait::prelude::*` should set you up
-for many use-cases.
+The [`surrogate_error_trait::prelude`] module
+exports commonly used traits and _aliased_ types.
+Importing `lazy_errors::surrogate_error_trait::prelude::*`
+should set you up for many use-cases.
 You may also want to import [`lazy_errors::surrogate_error_trait::Result`].
-Consider enabling the `std` feature
-which makes the `lazy_errors::prelude::*` available.
+Consider enabling the `std` feature or switching to Rust v1.81 or later,
+which will allow you to use `lazy_errors::prelude::*`.
 Types exported from the “regular” prelude
-have better intercompatibility with other crates.
+are based on `core::error::Error`/`std::error::Error` and thus
+are compatible with other crates.
 
  "##
 )]
@@ -508,7 +524,9 @@ have better intercompatibility with other crates.
 //! When you're using the aliased types from the prelude, this crate should
 //! support any `Result<_, E>` if `E` implements `Into<Stashable>`.
 //! [`Stashable`] is, basically, a `Box<dyn E>`, where `E` is either
-//! `std::error::Error` or a surrogate trait in `#![no_std]` mode
+//! `core::error::Error` (Rust v1.81 or later),
+//! `std::error::Error` (before Rust v1.81 if `std` is enabled),
+//! or a surrogate error trait otherwise
 //! ([`surrogate_error_trait::Reportable`]).
 //! Thus, using the aliased types from the prelude, any error you put into
 //! any of the containers defined by this crate will be boxed.
@@ -520,7 +538,7 @@ have better intercompatibility with other crates.
 //! - `String`
 //! - `anyhow::Error`
 //! - `eyre::Report`
-//! - `std::error::Error`
+//! - `core::error::Error`
 //! - All error types from this crate
 //!
 //! The primary error type from this crate is [`Error`].
@@ -557,13 +575,13 @@ have better intercompatibility with other crates.
 //! with custom lifetimes.
 //!
 //! ```
-//! # use std::str::FromStr;
+//! # use core::str::FromStr;
 //! use lazy_errors::{err, ErrorStash, OrStash, StashedResult};
 //!
-//! #[cfg(feature = "std")]
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 //! use lazy_errors::Stashable;
 //!
-//! #[cfg(not(feature = "std"))]
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::Stashable;
 //!
 //! #[derive(thiserror::Error, Debug)]
@@ -716,14 +734,14 @@ have better intercompatibility with other crates.
 //! [`or_wrap`]: crate::OrWrap::or_wrap
 //! [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
 #![cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 [`prelude`]: crate::prelude
 [`Stashable`]: crate::Stashable
 "##
 )]
 #![cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 [`prelude`]: crate::surrogate_error_trait::prelude
 [`Stashable`]: crate::surrogate_error_trait::Stashable
@@ -736,7 +754,7 @@ extern crate std;
 #[macro_use]
 extern crate alloc;
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 pub mod prelude;
 
 pub mod surrogate_error_trait;
@@ -766,7 +784,7 @@ pub use into_eyre::{IntoEyreReport, IntoEyreResult};
 /// Alias of the `Result<T, E>` we all know, but uses
 /// [`prelude::Error`]
 /// as default value for `E` if not specified explicitly.
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 
 /// The “default” [_inner error type_ `I`](crate::Error#inner-error-type-i)
@@ -780,13 +798,20 @@ pub type Result<T, E = prelude::Error> = core::result::Result<T, E>;
 /// such as [`Error`].
 /// Note that you can always simply use a custom inner error type.
 /// For example, in your codebase you could define `Stashable` instead
-/// as `Box<dyn std::error::Error + 'static>` and set an alias for
+/// as `Box<dyn core::error::Error + 'static>` and set an alias for
 /// [`Error<I>`] accordingly.
 ///
 /// [`Error`]: crate::error::Error
 /// [`Error<I>`]: crate::error::Error#inner-error-type-i
-#[cfg(feature = "std")]
-pub type Stashable<'a> =
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
+pub type Stashable<'a> = StashableImpl<'a>;
+
+#[cfg(feature = "rust-v1.81")]
+pub type StashableImpl<'a> =
+    alloc::boxed::Box<dyn core::error::Error + Send + Sync + 'a>;
+
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
+pub type StashableImpl<'a> =
     alloc::boxed::Box<dyn std::error::Error + Send + Sync + 'a>;
 
 /// ⚠️ Do not use this method! ⚠️

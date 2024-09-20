@@ -1,5 +1,5 @@
 use core::{
-    fmt::{Debug, Display},
+    fmt::{self, Debug, Display},
     ops::Deref,
 };
 
@@ -19,10 +19,10 @@ pub type Location = &'static core::panic::Location<'static>;
 ///
 /// ```
 /// # use core::str::FromStr;
-/// #[cfg(feature = "std")]
+/// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 /// use lazy_errors::prelude::*;
 ///
-/// #[cfg(not(feature = "std"))]
+/// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::surrogate_error_trait::prelude::*;
 ///
 /// let err: Error = u32::from_str("").or_wrap().unwrap_err();
@@ -50,13 +50,12 @@ pub type Location = &'static core::panic::Location<'static>;
 ///
 /// Most of the time you will be using the _aliased_ re-export of [`Error`]
 /// and other containers from the [`prelude`].
-/// In that case, `I` will be [`prelude::Stashable`].
-/// If the `std` feature is enabled, `prelude::Stashable` is an alias for
-/// `Box<dyn std::error::Error + Send + Sync + 'static>`.
+/// In that case, `I` will be [`prelude::Stashable`] which is an alias for
+/// `Box<dyn core::error::Error + Send + Sync + 'static>`.
 /// This trait bound was chosen because
-/// `Into<Box<dyn std::error::Error + Send + Sync + 'static>>`
+/// `Into<Box<dyn core::error::Error + Send + Sync + 'static>>`
 /// is implemented for many types via blanket implementations
-/// in `std` and crates such as `anyhow` or `eyre`.
+/// in `core`, `std`, and crates such as `anyhow` or `eyre`.
 ///
 /// Some examples of types that satisfy this constraint are:
 ///
@@ -64,16 +63,17 @@ pub type Location = &'static core::panic::Location<'static>;
 /// - `String`
 /// - `anyhow::Error`
 /// - `eyre::Report`
-/// - `std::error::Error`
+/// - `core::error::Error`
 /// - All error types from this crate
 ///
 /// Additionally, this trait bound makes `Error<I>` satisfy
-/// `std::error::Error + Send + Sync + 'static` as well,
+/// `core::error::Error + Send + Sync + 'static` as well,
 /// so it can be consumed by other crates
 /// that support errors in general.
 ///
-/// In `#![no_std]` builds, `std::error::Error` is not available.
-/// Without the `error_in_core` feature, [`core::error::Error`] isn't either.
+/// In Rust versions before v1.81, `core::error::Error` is not stable.
+/// If you don't enable the `std` feature in that case, `lazy_errors`
+/// can access neither `core::error::Error` nor `std::error::Error`.
 /// For these situations, `lazy_errors` comes with a surrogate error trait:
 /// [`Reportable`]. `lazy_errors` implements [`Reportable`]
 /// for error types in `core` and `alloc` as well as for `&str` and `String`.
@@ -81,8 +81,8 @@ pub type Location = &'static core::panic::Location<'static>;
 /// [`surrogate_error_trait::prelude::Stashable`] as an alias for
 /// `Box<dyn Reportable + Send + 'static>`
 /// and exports additional type aliases in [`surrogate_error_trait::prelude`]
-/// that allow you to use `lazy_errors` in `std`/`no_std` modes in the same way,
-/// just by importing different preludes.
+/// that allow you to use `lazy_errors` in the same way,
+/// regardless of which prelude you've imported.
 ///
 /// FYI, the [`Send`] trait bound
 /// [makes errors usable with `thread::spawn` and `task::spawn`][1].
@@ -125,7 +125,7 @@ pub type Location = &'static core::panic::Location<'static>;
 /// let error: Error<NeitherSendNorSync> = Error::wrap(inner);
 /// ```
 ///
-/// Even if you implemented `Debug`, `Display`, and `std::error::Error`,
+/// Even if you implemented `Debug`, `Display`, and `core::error::Error`,
 /// `eyre` still won't support your custom error type if it isn't
 /// `Send + Sync + 'static`:
 ///
@@ -137,7 +137,7 @@ pub type Location = &'static core::panic::Location<'static>;
 /// #[derive(Debug)]
 /// struct NeitherSendNorSync(Rc<usize>);
 ///
-/// impl std::fmt::Display for NeitherSendNorSync
+/// impl core::fmt::Display for NeitherSendNorSync
 /// {
 ///     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 ///     {
@@ -146,7 +146,7 @@ pub type Location = &'static core::panic::Location<'static>;
 ///     }
 /// }
 ///
-/// impl std::error::Error for NeitherSendNorSync {}
+/// impl core::error::Error for NeitherSendNorSync {}
 ///
 /// let inner = NeitherSendNorSync(Rc::new(42));
 /// let report = eyre!(inner);
@@ -158,14 +158,14 @@ pub type Location = &'static core::panic::Location<'static>;
 /// [`surrogate_error_trait::prelude::Stashable`]:
 /// crate::surrogate_error_trait::prelude::Stashable
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 [`prelude`]: crate::prelude
 [`prelude::Stashable`]: crate::prelude::Stashable
 "##
 )]
 #[cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 [`prelude`]: crate::surrogate_error_trait::prelude
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
@@ -240,10 +240,10 @@ pub struct StashedErrors<I>
 /// ```
 /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
 /// # use core::str::FromStr;
-/// #[cfg(feature = "std")]
+/// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 /// use lazy_errors::prelude::*;
 ///
-/// #[cfg(not(feature = "std"))]
+/// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::surrogate_error_trait::prelude::*;
 ///
 /// let err1: Error = u32::from_str("❌")
@@ -350,34 +350,59 @@ impl<I> From<Error<I>> for ErrorData<I>
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "rust-v1.81")]
+impl<I: Display + Debug> core::error::Error for Error<I>
+{
+}
+
+#[cfg(feature = "rust-v1.81")]
+impl<I: Display + Debug> core::error::Error for ErrorData<I>
+{
+}
+
+#[cfg(feature = "rust-v1.81")]
+impl<I: Display + Debug> core::error::Error for StashedErrors<I>
+{
+}
+
+#[cfg(feature = "rust-v1.81")]
+impl<I: Display + Debug> core::error::Error for WrappedError<I>
+{
+}
+
+#[cfg(feature = "rust-v1.81")]
+impl core::error::Error for AdHocError
+{
+}
+
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
 impl<I: Display + Debug> std::error::Error for Error<I>
 {
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
 impl<I: Display + Debug> std::error::Error for ErrorData<I>
 {
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
 impl<I: Display + Debug> std::error::Error for StashedErrors<I>
 {
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
 impl<I: Display + Debug> std::error::Error for WrappedError<I>
 {
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(not(feature = "rust-v1.81"), feature = "std"))]
 impl std::error::Error for AdHocError
 {
 }
 
 impl<I: Display> Display for Error<I>
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         Display::fmt(&self.0, f)
     }
@@ -385,7 +410,7 @@ impl<I: Display> Display for Error<I>
 
 impl<I: Display> Display for ErrorData<I>
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         let i: &dyn Display = match self {
             Self::AdHoc(err) => err,
@@ -410,10 +435,10 @@ impl<I: Display> Display for StashedErrors<I>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let mut errs = ErrorStash::new(|| "Summary");
@@ -442,10 +467,10 @@ impl<I: Display> Display for StashedErrors<I>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::{prelude::*, Result};
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// fn run() -> Result<()>
@@ -481,7 +506,7 @@ impl<I: Display> Display for StashedErrors<I>
     ///         at src/error.rs:1234:56
     ///       at src/error.rs:1234:56"});
     /// ```
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         // TODO: Limit recursion depth for multiple sequences of
         // “groups” that each only consist of a single element.
@@ -518,7 +543,7 @@ impl<I: Display> Display for StashedErrors<I>
 
 impl<I: Display> Display for WrappedError<I>
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         let err = &self.inner;
         let loc = self.location;
@@ -550,7 +575,7 @@ impl<I: Display> Display for WrappedError<I>
 
 impl Display for AdHocError
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         let is_pretty = f.alternate(); // `#` in format string
         if !is_pretty {
@@ -660,10 +685,10 @@ impl<I> ErrorData<I>
     /// Returns all errors that are direct children of this error.
     ///
     /// ```
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let err = Error::from_message("Something went wrong");
@@ -787,10 +812,10 @@ pub fn location() -> Location
 }
 
 fn display_list_of_children<I: Display>(
-    f: &mut core::fmt::Formatter<'_>,
+    f: &mut fmt::Formatter<'_>,
     errs: &[I],
     locs: &[Location],
-) -> core::fmt::Result
+) -> fmt::Result
 {
     for (e, l) in errs.iter().zip(locs) {
         display_multiline(f, &e)?;
@@ -800,9 +825,9 @@ fn display_list_of_children<I: Display>(
 }
 
 fn display_multiline<I: Display>(
-    f: &mut core::fmt::Formatter<'_>,
+    f: &mut fmt::Formatter<'_>,
     err: &I,
-) -> core::fmt::Result
+) -> fmt::Result
 {
     let mut prefix = "- ";
     for line in format!("{err:#}").lines() {
@@ -814,10 +839,10 @@ fn display_multiline<I: Display>(
 }
 
 fn display_location(
-    f: &mut core::fmt::Formatter<'_>,
+    f: &mut fmt::Formatter<'_>,
     indent: &str,
     location: Location,
-) -> core::fmt::Result
+) -> fmt::Result
 {
     writeln!(f)?;
     write!(f, "{indent}at {location}")
@@ -827,7 +852,7 @@ fn display_location(
 mod tests
 {
     #[test]
-    #[cfg(feature = "std")]
+    #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     fn error_is_small_std()
     {
         use crate::prelude::Stashable;

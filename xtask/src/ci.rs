@@ -4,6 +4,8 @@
 //! Several tasks can be skipped or run individually.
 //! Please refer to the [CLI documentation](Ci) for details.
 
+use core::fmt::{self, Display};
+
 use std::env;
 
 use clap::ArgAction;
@@ -340,6 +342,8 @@ enum Profile
 #[derive(clap::ValueEnum, Debug, Copy, Clone, PartialEq, Hash, Eq)]
 enum RustVersion
 {
+    #[clap(name = "1.81")]
+    V1_81,
     #[clap(name = "1.77")]
     V1_77,
     #[clap(name = "1.69")]
@@ -441,9 +445,9 @@ impl From<&QuickArgs> for AllArgs
     }
 }
 
-impl std::fmt::Display for Profile
+impl Display for Profile
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         match self {
             Profile::Dev => write!(f, "dev"),
@@ -745,7 +749,16 @@ fn as_feature_flags(
 {
     match rust_version {
         None => &[
-            "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+            "--group-features=rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,\
+             rust-v1.64",
+            "--ignore-unknown-features",
+            "--feature-powerset",
+            "--optional-deps",
+        ],
+        Some(RustVersion::V1_81) => &[
+            "--version-range=1.81..=1.81",
+            "--exclude-features=default",
+            "--features=rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
             "--feature-powerset",
             "--optional-deps",
@@ -755,6 +768,7 @@ fn as_feature_flags(
             "--exclude-features=default",
             "--features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
+            "--exclude-features=rust-v1.81",
             "--feature-powerset",
             "--optional-deps",
         ],
@@ -763,7 +777,7 @@ fn as_feature_flags(
             "--exclude-features=default",
             "--features=rust-v1.69,rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
-            "--exclude-features=rust-v1.77",
+            "--exclude-features=rust-v1.81,rust-v1.77",
             "--feature-powerset",
             "--optional-deps",
         ],
@@ -772,7 +786,7 @@ fn as_feature_flags(
             "--exclude-features=default",
             "--features=rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
-            "--exclude-features=rust-v1.77,rust-v1.69",
+            "--exclude-features=rust-v1.81,rust-v1.77,rust-v1.69",
             "--feature-powerset",
             "--optional-deps",
         ],
@@ -781,14 +795,15 @@ fn as_feature_flags(
             "--exclude-features=default,eyre",
             "--features=rust-v1.64",
             "--ignore-unknown-features",
-            "--exclude-features=rust-v1.77,rust-v1.69,rust-v1.66",
+            "--exclude-features=rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66",
             "--feature-powerset",
             "--optional-deps",
         ],
         Some(RustVersion::V1_61) => &[
             "--version-range=1.61..=1.61",
             "--exclude-features=default,eyre",
-            "--exclude-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+            "--exclude-features=rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,\
+             rust-v1.64",
             "--feature-powerset",
             "--optional-deps",
         ],
@@ -817,14 +832,16 @@ mod tests
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -832,7 +849,8 @@ mod tests
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
                 "--no-deps",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -846,7 +864,8 @@ mod tests
             &["cargo", "hack", "clippy",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -854,7 +873,8 @@ mod tests
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -862,7 +882,8 @@ mod tests
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
                 "--no-deps",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -870,7 +891,8 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -884,7 +906,8 @@ mod tests
             &["cargo", "hack", "clippy",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -892,7 +915,8 @@ mod tests
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -901,7 +925,8 @@ mod tests
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
                 "--no-deps",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -910,7 +935,8 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -926,7 +952,8 @@ mod tests
             &["cargo", "+nightly", "--locked", "clean"],
             &["cargo", "+nightly", "hack", "miri", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -942,14 +969,16 @@ mod tests
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -957,7 +986,8 @@ mod tests
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
                 "--no-deps",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -965,7 +995,8 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -974,7 +1005,8 @@ mod tests
             &["cargo", "hack", "check",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -982,7 +1014,8 @@ mod tests
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -991,7 +1024,8 @@ mod tests
             &["cargo", "hack", "doc",
                 "--locked", "--workspace",
                 "--no-deps",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -1000,7 +1034,8 @@ mod tests
             &["cargo", "hack", "build",
                 "--locked", "--workspace",
                 "--all-targets",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -1022,7 +1057,8 @@ mod tests
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -1035,7 +1071,8 @@ mod tests
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -1053,7 +1090,8 @@ mod tests
         &[
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",
@@ -1066,7 +1104,8 @@ mod tests
             ],
             &["cargo", "hack", "test",
                 "--locked", "--workspace",
-                "--group-features=rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
+                "--group-features=\
+                   rust-v1.81,rust-v1.77,rust-v1.69,rust-v1.66,rust-v1.64",
                 "--ignore-unknown-features",
                 "--feature-powerset",
                 "--optional-deps",

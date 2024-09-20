@@ -1,3 +1,5 @@
+use core::fmt::Display;
+
 use crate::Error;
 
 /// Adds the [`or_wrap_with`](Self::or_wrap_with) method on `Result<_, E>`,
@@ -9,14 +11,14 @@ use crate::Error;
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
 /// typically [`prelude::Stashable`].
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 
 [`prelude::Stashable`]: crate::prelude::Stashable
 "##
 )]
 #[cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
@@ -25,7 +27,7 @@ use crate::Error;
 pub trait OrWrapWith<F, M, T, E>
 where
     F: FnOnce() -> M,
-    M: std::fmt::Display,
+    M: Display,
 {
     /// If `self` is `Result::Ok(value)`, returns `Result::Ok(value)`;
     /// if `self` is `Result::Err(e1)`, returns `Result::Err(e2)`
@@ -39,10 +41,10 @@ where
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run(tokens: &[&str]) -> Result<(), Error>
@@ -83,7 +85,7 @@ where
 impl<F, M, T, E> OrWrapWith<F, M, T, E> for Result<T, E>
 where
     F: FnOnce() -> M,
-    M: std::fmt::Display,
+    M: Display,
 {
     #[track_caller]
     fn or_wrap_with<I>(self, f: F) -> Result<T, Error<I>>

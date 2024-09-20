@@ -9,8 +9,10 @@ publish = false
 [dependencies]
 clap = { version = "4.3.21", features = ["derive"] }
 
-# clap needs the FromStr implementations to return std::error::Error.
-# Furthermore, we need to be able to wrap errors from std::fs.
+# `clap` needs the `FromStr` implementations to return `std::error::Error`.
+# Furthermore, `xtask` needs to use several parts of `std` anyways,
+# so we could just enable the flag for `lazy_errors` as well,
+# making sure `lazy_errors` builds even on old Rust versions.
 lazy_errors = { path = "../lazy_errors", features = ["std"] }
 
 [dev-dependencies]

@@ -12,7 +12,7 @@ version = "0.0.0"
 
 [features]
 default = [
-  "std",
+  "rust-v1.81",
   "rust-v1.77",
   "rust-v1.69",
   "rust-v1.66",
@@ -20,6 +20,7 @@ default = [
 ]
 eyre = ["std", "dep:eyre"]
 std = []
+"rust-v1.81" = []
 "rust-v1.77" = []
 "rust-v1.69" = []
 "rust-v1.66" = []

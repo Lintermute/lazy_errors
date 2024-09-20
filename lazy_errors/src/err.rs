@@ -6,7 +6,7 @@
 /// or when your codebase is generally using the
 /// return type
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 [`lazy_errors::Result`](crate::Result)
 or
@@ -15,10 +15,12 @@ or
  "##
 )]
 #[cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 [`lazy_errors::surrogate_error_trait::Result`]
-(or `lazy_errors::Result` if the `std` feature is enabled).
+(or `lazy_errors::Result` if any of
+the `rust-v1.81` or
+the `std` features is enabled).
 
  "##
 )]
@@ -28,10 +30,10 @@ or
 /// A guard clause is a typical use case for this macro:
 ///
 /// ```
-/// #[cfg(feature = "std")]
+/// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 /// use lazy_errors::{err, Result};
 ///
-/// #[cfg(not(feature = "std"))]
+/// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::{err, surrogate_error_trait::Result};
 ///
 /// fn handle_ascii(text: &str) -> Result<()>
@@ -49,6 +51,7 @@ or
 #[macro_export]
 macro_rules! err {
     ($($arg:tt)*) => {{
-        $crate::Error::from_message(std::format!($($arg)*))
+        extern crate alloc;
+        $crate::Error::from_message(alloc::format!($($arg)*))
     }};
 }

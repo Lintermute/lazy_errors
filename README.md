@@ -4,10 +4,10 @@ Effortlessly create, group, and nest arbitrary errors,
 and defer error handling ergonomically.
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::{prelude::*, Result};
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 
 fn run(input1: &str, input2: &str) -> Result<()>
@@ -75,10 +75,12 @@ that let you continue on failure,
 deferring returning `Err` results.
 `lazy_errors` allows you to return two or more errors
 from functions simultaneously and ergonomically.
-`lazy_error` also supports nested errors.
+`lazy_errors` also supports nested errors.
 When you return nested errors from functions,
 errors will form a tree while “bubbling up”.
 You can report that error tree the user/developer in its entirety.
+`lazy_errors` integrates with `core::error::Error`
+and is `#![no_std]` by default.
 
 By default, `lazy_errors` will box your error values (like `anyhow`/`eyre`),
 which allows you to use different error types in the same `Result` type.
@@ -88,14 +90,11 @@ If you do so, you can access fields and methods of your error values
 at run-time without needing downcasts.
 Both modes of operation can work together, as will be shown
 in the example on the bottom of the page.
-
-While `lazy_error` integrates with `std::error::Error` by default,
-it also supports `#![no_std]` if you disable the `std` feature.
 When you define a few simple type aliases,
-`lazy_errors` easily supports error types that aren’t
+`lazy_errors` also easily supports custom error types that aren’t
 `Sync` or even `Send`.
 
-Common reasons to use this crate are:
+Common reasons to use the `lazy_errors` crate are:
 
 * You want to return an error but run some fallible cleanup logic before.
 * More generally, you’re calling two or more functions that return `Result`,
@@ -105,30 +104,37 @@ Common reasons to use this crate are:
 * You want to aggregate multiple errors before running some reporting or
   recovery logic, iterating over all errors collected.
 * You need to handle errors that don’t implement
-  `std::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
+  `core::error::Error`/`Display`/`Debug`/`Send`/`Sync` or other common
   traits.
 
 ## Feature Flags
 
-* `std`:
-  * Support error types that implement `std::error::Error`.
-  * Implement `std::error::Error` for `lazy_error` error types.
-* `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions.
-* `rust-vN` (where `N` is a Rust version number): Does nothing more than add
-  support for some error types from `core` and `alloc` that were stabilized
-  in the respective Rust version.
+* `std` (*disabled* by default):
+  * Support any error type that implements `std::error::Error` (instead of
+    `core::error::Error`)
+  * Implement `std::error::Error` for `lazy_errors` error types (instead of
+    `core::error::Error`)
+  * Enable this flag if you’re on Rust v1.80 or older (`core::error::Error`
+    was stabilized in Rust v1.81)
+* `eyre`: Adds `into_eyre_result` and `into_eyre_report` conversions
+* `rust-v$N` (where `$N` is a Rust version number): Add support for error
+  types from `core` and `alloc` that were stabilized in the respective Rust
+  version.
 
 ## MSRV
 
 The MSRV of `lazy_errors` depends on the set of enabled features:
 
-* Rust 1.77 supports all features and combinations thereof.
-* Rust versions 1.61 .. 1.77 need you to disable all `rust-vN` features
-  where `N` is greater than the version of your Rust toolchain. For example,
-  to compile `lazy_errors` on Rust 1.66, you have to disable `rust-v1.77`
-  and `rust-v1.69`, but not `rust-v1.66`.
-* `eyre` needs at least Rust 1.65.
-* Rust versions older than 1.61 are unsupported.
+* Rust v1.81 and later supports all features and combinations thereof
+* Rust v1.61 .. v1.81 need you to disable all `rust-v$N` features where `$N`
+  is greater than the version of your Rust toolchain. For example, to
+  compile `lazy_errors` on Rust v1.69, you have to disable `rust-v1.81` and
+  `rust-v1.77`, but not `rust-v1.69`.
+* `eyre` needs at least Rust v1.65
+* Rust versions older than v1.61 are unsupported
+* In Rust versions below v1.81, `core::error::Error` is not stable yet. If
+  you’re using a Rust version before v1.81, please consider enabling the
+  `std` feature to make `lazy_errors` use `std::core::Error` instead.
 
 ## Walkthrough
 
@@ -138,14 +144,19 @@ the generic type parameters accordingly, as will be shown in the example
 on the bottom of this page. Usually however, you’d want to use the
 aliased types from the [`prelude`][__link0]. When you’re using these aliases,
 errors will be boxed and you can dynamically return groups of errors
-of differing types from the same function.
+of differing types from the same function. When you’re also using
+the default feature flags, `lazy_errors` is `#![no_std]` and
+integrates with `core::error::Error`. In that case,
+`lazy_errors` supports any error type that implements `core::error::Error`,
+and all error types from this crate implement `core::error::Error` as well.
 
-The `std` feature is enabled by default, making `lazy_error` support
-third-party error types that implement `std::error::Error`.
-All error types from this crate will implement `std::error::Error` as well
-in that case.
-If you need `#![no_std]` support, you can disable the `std` feature
-and use the [`surrogate_error_trait::prelude`][__link1] instead.
+In Rust versions below v1.81, `core::error::Error` is not stable yet.
+If you’re using an old Rust version, please disable (at least)
+the `rust-v1.81` feature and enable the `std` feature instead.
+Enabling the `std` feature will make `lazy_errors` use `std::error::Error`
+instead of `core::error::Error`. If you’re using an old Rust version and
+need `#![no_std]` support nevertheless, please use the types from
+the [`surrogate_error_trait::prelude`][__link1] instead of the regular prelude.
 If you do so, `lazy_errors` will box any error type that implements the
 [`surrogate_error_trait::Reportable`][__link2] marker trait.
 If necessary, you can implement that trait for your custom types as well
@@ -170,10 +181,10 @@ import the [`OrStash`][__link5] trait or the [`prelude`][__link6].
 Here’s an example:
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::{prelude::*, Result};
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 
 fn run() -> Result<()>
@@ -252,10 +263,10 @@ this distinction allows converting [`StashWithErrors`][__link30] into [`Error`][
 directly.
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::{prelude::*, Result};
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 
 fn run() -> Result<()>
@@ -357,10 +368,10 @@ fn main()
 As you might have noticed, [`Error`][__link40]s form hierarchies:
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::{prelude::*, Result};
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 
 fn parent() -> Result<()>
@@ -407,10 +418,10 @@ that can be converted into the
 or to attach some context to an error:
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::{prelude::*, Result};
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 
 fn run(s: &str) -> Result<u32>
@@ -445,10 +456,10 @@ The [`err!`][__link46] macro allows you to format a string
 and turn it into an ad-hoc [`Error`][__link47] at the same time:
 
 ```rust
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::prelude::*;
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::prelude::*;
 
 let pid = 42;
@@ -456,22 +467,28 @@ let err: Error = err!("Error in process {pid}");
 ```
 
 You’ll often find ad-hoc errors to be the leaves in an error tree.
-However, the error tree can have almost any *inner error type* as leaf.
+However, the error tree can have almost any
+[*inner error type*][__link48] as leaf.
 
 #### Supported Error Types
 
-The [`prelude`][__link48] module exports commonly used traits and *aliased* types.
-Importing `lazy_errors::prelude::*` should set you up for most use-cases.
-You may also want to import [`lazy_errors::Result`][__link49].
-In `![no_std]` mode or when `core::error::Error` is not available,
-you can import the [`surrogate_error_trait::prelude`][__link50] instead, and use
-the corresponding [`lazy_errors::surrogate_error_trait::Result`][__link51].
+The [`prelude`][__link49] module
+exports commonly used traits and *aliased* types.
+Importing `lazy_errors::prelude::*`
+should set you up for most use-cases.
+You may also want to import [`lazy_errors::Result`][__link50].
+When `core::error::Error` is not available
+(i.e. in `![no_std]` mode before Rust v1.81),
+you can import the [`surrogate_error_trait::prelude`][__link51] instead, and use
+the corresponding [`lazy_errors::surrogate_error_trait::Result`][__link52].
 
 When you’re using the aliased types from the prelude, this crate should
 support any `Result<_, E>` if `E` implements `Into<Stashable>`.
-[`Stashable`][__link52] is, basically, a `Box<dyn E>`, where `E` is either
-`std::error::Error` or a surrogate trait in `#![no_std]` mode
-([`surrogate_error_trait::Reportable`][__link53]).
+[`Stashable`][__link53] is, basically, a `Box<dyn E>`, where `E` is either
+`core::error::Error` (Rust v1.81 or later),
+`std::error::Error` (before Rust v1.81 if `std` is enabled),
+or a surrogate error trait otherwise
+([`surrogate_error_trait::Reportable`][__link54]).
 Thus, using the aliased types from the prelude, any error you put into
 any of the containers defined by this crate will be boxed.
 The `Into<Box<dyn E>>` trait bound was chosen because it is implemented
@@ -482,49 +499,49 @@ Some examples of types that satisfy this constraint are:
 * `String`
 * `anyhow::Error`
 * `eyre::Report`
-* `std::error::Error`
+* `core::error::Error`
 * All error types from this crate
 
-The primary error type from this crate is [`Error`][__link54].
-You can convert all supported *error-like* types into [`Error`][__link55]
-by calling [`or_wrap`][__link56] or [`or_wrap_with`][__link57].
+The primary error type from this crate is [`Error`][__link55].
+You can convert all supported *error-like* types into [`Error`][__link56]
+by calling [`or_wrap`][__link57] or [`or_wrap_with`][__link58].
 
 In other words, this crate supports a wide variety of error types.
 However, in some cases you might need a different kind of flexibility
 than that. For example, maybe you don’t want to lose static error type
-information or maybe your error types aren’t [`Sync`][__link58].
+information or maybe your error types aren’t [`Sync`][__link59].
 In general, this crate should work well with any `Result<_, E>`
-if `E` implements [`Into<I>`][__link59] where `I` is named the
-[*inner error type* of `Error`][__link60].
+if `E` implements [`Into<I>`][__link60] where `I` is named the
+[*inner error type* of `Error`][__link61].
 This crate will store errors as type `I` in its containers, for example
-in [`ErrorStash`][__link61] or in [`Error`][__link62]. When you’re using the type aliases
-from the [`prelude`][__link63], `I` will always be [`Stashable`][__link64].
-However, you do not need to use [`Stashable`][__link65] at all.
+in [`ErrorStash`][__link62] or in [`Error`][__link63]. When you’re using the type aliases
+from the [`prelude`][__link64], `I` will always be [`Stashable`][__link65].
+However, you do not need to use [`Stashable`][__link66] at all.
 You can chose the type to use for `I` arbitrarily.
 It can be a custom type and does not need to implement any traits
-or auto traits except [`Sized`][__link66].
+or auto traits except [`Sized`][__link67].
 Thus, if the default aliases defined in the prelude
 do not suit your purpose, you can import the required traits
 and types manually and define custom aliases, as shown in the next example.
 
 #### Example: Custom Error Types
 
-Here’s a complex example that does not use the [`prelude`][__link67]
+Here’s a complex example that does not use the [`prelude`][__link68]
 but instead defines its own aliases. In the example, `Error<CustomError>`
 and `ParserErrorStash` don’t box their errors. Instead, they have all
 error type information present statically, which allows you to write
 recovery logic without having to rely on downcasts at run-time.
 The example also shows how such custom error types
-can still be used alongside the boxed error types ([`Stashable`][__link68])
+can still be used alongside the boxed error types ([`Stashable`][__link69])
 with custom lifetimes.
 
 ```rust
 use lazy_errors::{err, ErrorStash, OrStash, StashedResult};
 
-#[cfg(feature = "std")]
+#[cfg(any(feature = "rust-v1.81", feature = "std"))]
 use lazy_errors::Stashable;
 
-#[cfg(not(feature = "std"))]
+#[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 use lazy_errors::surrogate_error_trait::Stashable;
 
 #[derive(thiserror::Error, Debug)]
@@ -690,73 +707,74 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the work by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
 
- [__cargo_doc2readme_dependencies_info]: ggGkYW0BYXSEG9ybpOeDAqGAG9HvJZNoD8WVG9j2ywGL9HOVG66pmD4ift53YXKEGz3EF3GiOPUnG3K2S9-ZbrqdG4PFyD6yzY-BGxakgkVxTUrRYWSBgmtsYXp5X2Vycm9yc2UwLjYuMA
- [__link0]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=prelude
- [__link1]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=surrogate_error_trait::prelude
- [__link10]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/type.Result.html
- [__link11]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrStash::or_stash
- [__link12]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link13]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link14]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link15]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/type.Result.html
- [__link16]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link17]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link18]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrCreateStash::or_create_stash
- [__link19]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrCreateStash::or_create_stash
- [__link2]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=surrogate_error_trait::Reportable
- [__link20]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link21]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link22]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link23]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link24]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link25]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link26]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link27]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link28]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/type.Result.html
- [__link29]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link3]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrStash::or_stash
- [__link30]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link31]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link32]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link33]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link34]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/type.Result.html
- [__link35]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link36]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link37]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=StashWithErrors
- [__link38]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=IntoEyreResult::into_eyre_result
- [__link39]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=IntoEyreReport::into_eyre_report
- [__link4]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrStash::or_stash
- [__link40]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link41]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrap::or_wrap
- [__link42]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link43]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrap::or_wrap
- [__link44]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link45]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/struct.Error.html#inner-error-type-i
- [__link46]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/macro.err.html
- [__link47]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link48]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=prelude
- [__link49]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Result
- [__link5]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrStash
- [__link50]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=surrogate_error_trait::prelude
- [__link51]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=surrogate_error_trait::Result
- [__link52]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Stashable
- [__link53]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=surrogate_error_trait::Reportable
- [__link54]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link55]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link56]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrap::or_wrap
- [__link57]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=OrWrapWith::or_wrap_with
- [__link58]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
- [__link59]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
- [__link6]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=prelude
- [__link60]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/struct.Error.html#inner-error-type-i
- [__link61]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link62]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Error
- [__link63]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=prelude
- [__link64]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Stashable
- [__link65]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Stashable
- [__link66]: https://doc.rust-lang.org/stable/std/marker/trait.Sized.html
- [__link67]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=prelude
- [__link68]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=Stashable
- [__link7]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link8]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
- [__link9]: https://docs.rs/lazy_errors/0.7.0/lazy_errors/?search=ErrorStash
+ [__cargo_doc2readme_dependencies_info]: ggGkYW0BYXSEG9ybpOeDAqGAG9HvJZNoD8WVG9j2ywGL9HOVG66pmD4ift53YXKEG9-trQxqRTalGzp99DIBrmgGG5deW7MhlMo8G1uXE2i2ySOIYWSBgmtsYXp5X2Vycm9yc2UwLjguMA
+ [__link0]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=prelude
+ [__link1]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=surrogate_error_trait::prelude
+ [__link10]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/type.Result.html
+ [__link11]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrStash::or_stash
+ [__link12]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link13]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link14]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link15]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/type.Result.html
+ [__link16]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link17]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link18]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrCreateStash::or_create_stash
+ [__link19]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrCreateStash::or_create_stash
+ [__link2]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=surrogate_error_trait::Reportable
+ [__link20]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link21]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link22]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link23]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link24]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link25]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link26]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link27]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link28]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/type.Result.html
+ [__link29]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link3]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrStash::or_stash
+ [__link30]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link31]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link32]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link33]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link34]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/type.Result.html
+ [__link35]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link36]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link37]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=StashWithErrors
+ [__link38]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=IntoEyreResult::into_eyre_result
+ [__link39]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=IntoEyreReport::into_eyre_report
+ [__link4]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrStash::or_stash
+ [__link40]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link41]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link42]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link43]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link44]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link45]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link46]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/macro.err.html
+ [__link47]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link48]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link49]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=prelude
+ [__link5]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrStash
+ [__link50]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Result
+ [__link51]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=surrogate_error_trait::prelude
+ [__link52]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=surrogate_error_trait::Result
+ [__link53]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Stashable
+ [__link54]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=surrogate_error_trait::Reportable
+ [__link55]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link56]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link57]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrap::or_wrap
+ [__link58]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=OrWrapWith::or_wrap_with
+ [__link59]: https://doc.rust-lang.org/stable/std/marker/trait.Sync.html
+ [__link6]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=prelude
+ [__link60]: https://doc.rust-lang.org/stable/std/convert/trait.Into.html
+ [__link61]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/struct.Error.html#inner-error-type-i
+ [__link62]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link63]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Error
+ [__link64]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=prelude
+ [__link65]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Stashable
+ [__link66]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Stashable
+ [__link67]: https://doc.rust-lang.org/stable/std/marker/trait.Sized.html
+ [__link68]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=prelude
+ [__link69]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=Stashable
+ [__link7]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link8]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash
+ [__link9]: https://docs.rs/lazy_errors/0.8.0/lazy_errors/?search=ErrorStash

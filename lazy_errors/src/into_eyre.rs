@@ -1,4 +1,4 @@
-use alloc::fmt::Display;
+use core::fmt::Display;
 
 use crate::{
     error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError},
@@ -27,7 +27,7 @@ where I: IntoEyreReport
     ///
     /// fn parse(s: &str) -> eyre::Result<i32>
     /// {
-    ///     use std::str::FromStr;
+    ///     use core::str::FromStr;
     ///     i32::from_str(s).wrap_err_with(|| format!("Not an i32: '{s}'"))
     /// }
     ///
@@ -67,7 +67,7 @@ where I: IntoEyreReport
 /// Do not implement this trait. Importing the trait is sufficient.
 /// due to blanket implementations. The trait is implemented on
 /// [`StashWithErrors`] and on
-/// `E` if `E` implements `std::error::Error + Send + Sync + 'a`.
+/// `E` if `E` implements `core::error::Error + Send + Sync + 'a`.
 pub trait IntoEyreReport
 {
     /// Lossy conversion to return some type, for example
@@ -167,7 +167,7 @@ impl<I: Display> IntoEyreReport for StashWithErrors<I>
     /// Secondly, there aren't any accessors for these errors.
     /// Thirdly, these errors are not printed when using `{:?}`,
     /// as opposed to the “regular” error causes added via `wrap_err`.
-    /// If we used `Into<Box<dyn std::error::Error + Send + Sync + 'static>>`
+    /// If we used `Into<Box<dyn core::error::Error + Send + Sync + 'static>>`
     /// and return the [`eyre::Report`] from `main`, eyre would
     /// display the error using the regular, non-pretty-printed
     /// form and we won't see the full list of errors.

@@ -1,6 +1,7 @@
+use core::fmt::{self, Debug, Display};
+
 use alloc::{
     boxed::Box,
-    fmt::{Debug, Display},
     string::{String, ToString},
     vec::Vec,
 };
@@ -33,10 +34,10 @@ use crate::{
 ///
 /// ```
 /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-/// #[cfg(feature = "std")]
+/// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 /// use lazy_errors::prelude::*;
 ///
-/// #[cfg(not(feature = "std"))]
+/// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::surrogate_error_trait::prelude::*;
 ///
 /// let errs = ErrorStash::new(|| "Something went wrong");
@@ -124,7 +125,7 @@ where
     M: Display,
     I: Debug,
 {
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         match self {
             Self::Empty(_) => write!(f, "ErrorStash(Empty)"),
@@ -143,7 +144,7 @@ where
     F: FnOnce() -> M,
     M: Display,
 {
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         match self {
             Self::Empty(_) => display::<I>(f, &[]),
@@ -154,7 +155,7 @@ where
 
 impl<I> Display for StashWithErrors<I>
 {
-    fn fmt(&self, f: &mut alloc::fmt::Formatter<'_>) -> alloc::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         display(f, self.errors())
     }
@@ -225,10 +226,10 @@ where
     /// Returns `true` if the stash is empty.
     ///
     /// ```
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// let mut errs = ErrorStash::new(|| "Summary message");
@@ -283,10 +284,10 @@ where
     /// ```
     /// use std::collections::HashMap;
     ///
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::{prelude::*, Result};
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// // Always parses two configs, even if the first one contains an error.
@@ -379,10 +380,10 @@ where
     ///
     /// ```
     /// # use core::str::FromStr;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::{prelude::*, Result};
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// fn count_numbers(nums: &[&str]) -> Result<usize>
@@ -494,10 +495,7 @@ impl<I> StashWithErrors<I>
     }
 }
 
-fn display<I>(
-    f: &mut alloc::fmt::Formatter<'_>,
-    errors: &[I],
-) -> alloc::fmt::Result
+fn display<I>(f: &mut fmt::Formatter<'_>, errors: &[I]) -> fmt::Result
 {
     let count = errors.len();
     write!(f, "Stash of {count} errors currently")
@@ -506,10 +504,12 @@ fn display<I>(
 #[cfg(test)]
 mod tests
 {
+    use core::fmt::Debug;
+
     use crate::{Error, ErrorStash};
 
     #[test]
-    #[cfg(feature = "std")]
+    #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     fn stash_debug_fmt_when_empty_std()
     {
         use crate::prelude::Stashable;
@@ -523,7 +523,7 @@ mod tests
         stash_debug_fmt_when_empty::<Stashable>()
     }
 
-    fn stash_debug_fmt_when_empty<I: std::fmt::Debug>()
+    fn stash_debug_fmt_when_empty<I: Debug>()
     {
         let errs = ErrorStash::<_, _, I>::new(|| "Mock message");
 
@@ -531,7 +531,7 @@ mod tests
     }
 
     #[test]
-    #[cfg(feature = "std")]
+    #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     fn stash_debug_fmt_with_errors_std()
     {
         use crate::prelude::Stashable;
@@ -565,7 +565,7 @@ mod tests
 
     fn stash_debug_fmt_with_errors<'a, I>()
     where
-        I: std::fmt::Debug,
+        I: Debug,
         Error<I>: Into<I>,
         &'a str: Into<I>,
     {

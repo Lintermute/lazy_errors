@@ -1,4 +1,7 @@
-use std::{fmt::Display, str::FromStr};
+use core::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use lazy_errors::{prelude::*, Result};
 
@@ -127,7 +130,7 @@ impl FromStr for CustomVersion
 
 impl Display for VersionNumber
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         match self {
             VersionNumber::MajorMinorPatch(v) => Display::fmt(v, f),
@@ -138,7 +141,7 @@ impl Display for VersionNumber
 
 impl Display for MajorMinorPatch
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         let major = self.major;
         let minor = self.minor;
@@ -150,7 +153,7 @@ impl Display for MajorMinorPatch
 
 impl Display for CustomVersion
 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result
     {
         write!(f, "{}", self.0)
     }

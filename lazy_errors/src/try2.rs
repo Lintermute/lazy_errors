@@ -4,10 +4,10 @@
 ///
 /// ```
 /// # use core::str::FromStr;
-/// #[cfg(feature = "std")]
+/// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
 /// use lazy_errors::{prelude::*, Result};
 ///
-/// #[cfg(not(feature = "std"))]
+/// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 ///
 /// fn parse_version(s: &str) -> Result<(u32, u32)>

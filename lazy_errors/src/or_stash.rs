@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{ErrorStash, StashWithErrors};
 
 /// Adds the [`or_stash`](Self::or_stash) method on `Result<_, E>`,
@@ -11,14 +9,14 @@ use crate::{ErrorStash, StashWithErrors};
 /// where `I` is the [_inner error type_](crate::Error#inner-error-type-i),
 /// typically [`prelude::Stashable`].
 #[cfg_attr(
-    feature = "std",
+    any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
 
 [`prelude::Stashable`]: crate::prelude::Stashable
 "##
 )]
 #[cfg_attr(
-    not(feature = "std"),
+    not(any(feature = "rust-v1.81", feature = "std")),
     doc = r##"
 
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
@@ -45,10 +43,10 @@ pub trait OrStash<S, I, T>
     ///
     /// ```
     /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::prelude::*;
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
     /// fn run() -> Result<(), Error>
@@ -149,7 +147,7 @@ impl<F, M, I, T, E> OrStash<ErrorStash<F, M, I>, I, T> for Result<T, E>
 where
     E: Into<I>,
     F: FnOnce() -> M,
-    M: Display,
+    M: core::fmt::Display,
 {
     #[track_caller]
     fn or_stash(self, stash: &mut ErrorStash<F, M, I>) -> StashedResult<T, I>
@@ -197,10 +195,10 @@ impl<'s, T, E> StashedResult<'s, T, E>
     ///
     /// ```
     /// # use core::str::FromStr;
-    /// #[cfg(feature = "std")]
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
     /// use lazy_errors::{prelude::*, Result};
     ///
-    /// #[cfg(not(feature = "std"))]
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
     /// fn parse_version(major: &str, minor: &str) -> Result<(u32, u32)>
