@@ -27,8 +27,7 @@ use version::Version;
 type CommandLine = Vec<&'static str>;
 
 #[derive(clap::Parser, Debug, Clone, PartialEq, Hash, Eq)]
-enum Xtask
-{
+enum Xtask {
     /// Runs the CI quality gate or parts thereof
     /// in the workspace on your local machine.
     #[command(subcommand)]
@@ -39,19 +38,17 @@ enum Xtask
     Version(Version),
 }
 
-fn main() -> ExitCode
-{
+fn main() -> ExitCode {
     match run() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("{err:#}");
             ExitCode::FAILURE
-        },
+        }
     }
 }
 
-fn run() -> Result<()>
-{
+fn run() -> Result<()> {
     let command = parse_args_from_env()?;
 
     match command {
@@ -60,8 +57,7 @@ fn run() -> Result<()>
     }
 }
 
-fn parse_args_from_env() -> Result<Xtask>
-{
+fn parse_args_from_env() -> Result<Xtask> {
     parse_args(std::env::args_os())
 }
 
@@ -78,7 +74,8 @@ where
 }
 
 fn exec_all<L>(tasklist: &[L]) -> Result<()>
-where L: AsRef<[&'static str]>
+where
+    L: AsRef<[&'static str]>,
 {
     for task in tasklist {
         exec(task.as_ref())?;
@@ -87,19 +84,16 @@ where L: AsRef<[&'static str]>
     Ok(())
 }
 
-fn exec(command_with_args: &[&str]) -> Result<()>
-{
+fn exec(command_with_args: &[&str]) -> Result<()> {
     exec_impl(command_with_args, false)?;
     Ok(())
 }
 
-fn exec_and_capture(command_with_args: &[&str]) -> Result<String>
-{
+fn exec_and_capture(command_with_args: &[&str]) -> Result<String> {
     exec_impl(command_with_args, true)
 }
 
-fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String>
-{
+fn exec_impl(command_with_args: &[&str], capture: bool) -> Result<String> {
     let (command, args) = match command_with_args {
         [head, tail @ ..] => (head, tail),
         _ => return Err(err!("No command passed.")),
@@ -166,22 +160,19 @@ where
 }
 
 #[cfg(test)]
-mod tests
-{
+mod tests {
     use test_case::test_case;
 
     use super::*;
 
     #[test]
-    fn exec_is_no_op_if_list_is_empty() -> Result<()>
-    {
+    fn exec_is_no_op_if_list_is_empty() -> Result<()> {
         let empty: &[&[&str]] = &[];
         exec_all(empty) // no-op
     }
 
     #[test]
-    fn exec_returns_error_if_command_is_empty() -> Result<()>
-    {
+    fn exec_returns_error_if_command_is_empty() -> Result<()> {
         let err = exec_all(&[&[]]).unwrap_err();
         assert_eq!(err.to_string(), "No command passed.");
         Ok(())
@@ -189,15 +180,13 @@ mod tests
 
     #[test]
     #[cfg_attr(miri, ignore)]
-    fn exec_can_invoke_cargo() -> Result<()>
-    {
+    fn exec_can_invoke_cargo() -> Result<()> {
         exec_all(&[&["cargo", "version"]])
     }
 
     #[test]
     #[cfg_attr(miri, ignore)]
-    fn exec_returns_cargo_version() -> Result<()>
-    {
+    fn exec_returns_cargo_version() -> Result<()> {
         let version = exec_and_capture(&["cargo", "version"])?;
         dbg!(&version);
 
@@ -219,8 +208,7 @@ mod tests
     fn exec_propagates_process_failure(
         commands: &[&[&'static str]],
         expected_error: &str,
-    )
-    {
+    ) {
         let err = exec_all(commands).unwrap_err();
         let msg = &format!("{err}");
 
@@ -230,8 +218,7 @@ mod tests
 
     #[test]
     #[cfg_attr(miri, ignore)]
-    fn exec_propagates_stderr()
-    {
+    fn exec_propagates_stderr() {
         let err =
             exec_and_capture(&["cargo", "unexisting-subcommand"]).unwrap_err();
 

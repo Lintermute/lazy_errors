@@ -47,21 +47,18 @@ where
     /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
-    /// fn run(tokens: &[&str]) -> Result<(), Error>
-    /// {
+    /// fn run(tokens: &[&str]) -> Result<(), Error> {
     ///     all_ascii(tokens).or_wrap_with(|| "Input is not ASCII")
     /// }
     ///
-    /// fn all_ascii(tokens: &[&str]) -> Result<(), String>
-    /// {
+    /// fn all_ascii(tokens: &[&str]) -> Result<(), String> {
     ///     match tokens.iter().find(|s| !s.is_ascii()) {
     ///         None => Ok(()),
     ///         Some(not_ascii) => Err(not_ascii.to_string()),
     ///     }
     /// }
     ///
-    /// fn main()
-    /// {
+    /// fn main() {
     ///     assert!(run(&["foo", "bar"]).is_ok());
     ///
     ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
@@ -79,7 +76,8 @@ where
     /// [`WrappedError`]: crate::WrappedError
     /// [`or_wrap`]: crate::OrWrap::or_wrap
     fn or_wrap_with<I>(self, f: F) -> Result<T, Error<I>>
-    where E: Into<I>;
+    where
+        E: Into<I>;
 }
 
 impl<F, M, T, E> OrWrapWith<F, M, T, E> for Result<T, E>
@@ -89,7 +87,8 @@ where
 {
     #[track_caller]
     fn or_wrap_with<I>(self, f: F) -> Result<T, Error<I>>
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         match self {
             Ok(t) => Ok(t),

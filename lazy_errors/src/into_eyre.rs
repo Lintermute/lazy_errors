@@ -14,7 +14,8 @@ use crate::{
 /// if `R` can be converted into `Result<_, E>` and
 /// if `E` implements [`IntoEyreReport`].
 pub trait IntoEyreResult<T, I>
-where I: IntoEyreReport
+where
+    I: IntoEyreReport,
 {
     /// Lossy conversion to return some type,
     /// for example a list of errors that may be empty,
@@ -25,14 +26,12 @@ where I: IntoEyreReport
     /// use eyre::WrapErr;
     /// use lazy_errors::prelude::*;
     ///
-    /// fn parse(s: &str) -> eyre::Result<i32>
-    /// {
+    /// fn parse(s: &str) -> eyre::Result<i32> {
     ///     use core::str::FromStr;
     ///     i32::from_str(s).wrap_err_with(|| format!("Not an i32: '{s}'"))
     /// }
     ///
-    /// fn parse_all() -> eyre::Result<()>
-    /// {
+    /// fn parse_all() -> eyre::Result<()> {
     ///     let mut stash = ErrorStash::new(|| "Failed to parse");
     ///
     ///     parse("🙈").or_stash(&mut stash);
@@ -68,8 +67,7 @@ where I: IntoEyreReport
 /// due to blanket implementations. The trait is implemented on
 /// [`StashWithErrors`] and on
 /// `E` if `E` implements `core::error::Error + Send + Sync + 'a`.
-pub trait IntoEyreReport
-{
+pub trait IntoEyreReport {
     /// Lossy conversion to return some type, for example
     /// a non-empty list of one or more errors,
     /// from functions returning [`eyre::Result`],
@@ -80,8 +78,7 @@ pub trait IntoEyreReport
     /// use eyre::{bail, eyre};
     /// use lazy_errors::prelude::*;
     ///
-    /// fn adhoc_error() -> eyre::Result<()>
-    /// {
+    /// fn adhoc_error() -> eyre::Result<()> {
     ///     let err = Error::from_message("first() failed");
     ///     bail!(err.into_eyre_report());
     /// }
@@ -93,8 +90,7 @@ pub trait IntoEyreReport
     ///     first() failed
     ///     at src/into_eyre.rs:1234:56"});
     ///
-    /// fn wrapped_report() -> eyre::Result<()>
-    /// {
+    /// fn wrapped_report() -> eyre::Result<()> {
     ///     let report = eyre!("This is an eyre::Report");
     ///     let err: Error = Error::wrap(report);
     ///     bail!(err.into_eyre_report());
@@ -107,8 +103,7 @@ pub trait IntoEyreReport
     ///     This is an eyre::Report
     ///     at src/into_eyre.rs:1234:56"});
     ///
-    /// fn stashed_errors() -> eyre::Result<()>
-    /// {
+    /// fn stashed_errors() -> eyre::Result<()> {
     ///     let mut stash = ErrorStash::new(|| "One or more things failed");
     ///
     ///     adhoc_error().or_stash(&mut stash);
@@ -148,15 +143,13 @@ where
     Error<I>: IntoEyreReport,
 {
     #[track_caller]
-    fn into_eyre_result(self) -> Result<(), eyre::Report>
-    {
+    fn into_eyre_result(self) -> Result<(), eyre::Report> {
         let result: Result<(), Error<I>> = self.into();
         result.map_err(IntoEyreReport::into_eyre_report)
     }
 }
 
-impl<I: Display> IntoEyreReport for StashWithErrors<I>
-{
+impl<I: Display> IntoEyreReport for StashWithErrors<I> {
     /// Flattens the error hierarchy into a single string
     /// that is then passed to [`eyre::eyre!`].
     ///
@@ -172,17 +165,14 @@ impl<I: Display> IntoEyreReport for StashWithErrors<I>
     /// display the error using the regular, non-pretty-printed
     /// form and we won't see the full list of errors.
     #[track_caller]
-    fn into_eyre_report(self) -> eyre::Report
-    {
+    fn into_eyre_report(self) -> eyre::Report {
         let err = Error::<I>::from(self);
         eyre::eyre!(format!("{err:#}"))
     }
 }
 
-impl<I: Display> IntoEyreReport for Error<I>
-{
-    fn into_eyre_report(self) -> eyre::Report
-    {
+impl<I: Display> IntoEyreReport for Error<I> {
+    fn into_eyre_report(self) -> eyre::Report {
         match self.into() {
             ErrorData::Stashed(inner) => inner.into_eyre_report(),
             ErrorData::Wrapped(inner) => inner.into_eyre_report(),
@@ -191,26 +181,20 @@ impl<I: Display> IntoEyreReport for Error<I>
     }
 }
 
-impl<I: Display> IntoEyreReport for StashedErrors<I>
-{
-    fn into_eyre_report(self) -> eyre::Report
-    {
+impl<I: Display> IntoEyreReport for StashedErrors<I> {
+    fn into_eyre_report(self) -> eyre::Report {
         eyre::eyre!(format!("{self:#}"))
     }
 }
 
-impl<I: Display> IntoEyreReport for WrappedError<I>
-{
-    fn into_eyre_report(self) -> eyre::Report
-    {
+impl<I: Display> IntoEyreReport for WrappedError<I> {
+    fn into_eyre_report(self) -> eyre::Report {
         eyre::eyre!(format!("{self:#}"))
     }
 }
 
-impl IntoEyreReport for AdHocError
-{
-    fn into_eyre_report(self) -> eyre::Report
-    {
+impl IntoEyreReport for AdHocError {
+    fn into_eyre_report(self) -> eyre::Report {
         eyre::eyre!(format!("{self:#}"))
     }
 }

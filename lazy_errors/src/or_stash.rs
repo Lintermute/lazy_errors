@@ -22,8 +22,7 @@ use crate::{ErrorStash, StashWithErrors};
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
 "##
 )]
-pub trait OrStash<S, I, T>
-{
+pub trait OrStash<S, I, T> {
     /// If `self` is `Result::Ok(value)`,
     /// returns the `Ok(value)` variant of [`StashedResult`];
     /// if `self` is `Result::Err(e)`,
@@ -49,8 +48,7 @@ pub trait OrStash<S, I, T>
     /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
-    /// fn run() -> Result<(), Error>
-    /// {
+    /// fn run() -> Result<(), Error> {
     ///     let mut stash = ErrorStash::new(|| "Failed to run application");
     ///
     ///     print_if_ascii("❓").or_stash(&mut stash);
@@ -62,8 +60,7 @@ pub trait OrStash<S, I, T>
     ///     stash.into() // Ok(()) if the stash is still empty
     /// }
     ///
-    /// fn print_if_ascii(text: &str) -> Result<(), Error>
-    /// {
+    /// fn print_if_ascii(text: &str) -> Result<(), Error> {
     ///     if !text.is_ascii() {
     ///         return Err(err!("Input is not ASCII: '{text}'"));
     ///     }
@@ -72,13 +69,11 @@ pub trait OrStash<S, I, T>
     ///     Ok(())
     /// }
     ///
-    /// fn cleanup() -> Result<(), Error>
-    /// {
+    /// fn cleanup() -> Result<(), Error> {
     ///     Err(err!("Cleanup failed"))
     /// }
     ///
-    /// fn main()
-    /// {
+    /// fn main() {
     ///     let err = run().unwrap_err();
     ///     let printed = format!("{err:#}");
     ///     let printed = replace_line_numbers(&printed);
@@ -137,8 +132,7 @@ pub trait OrStash<S, I, T>
 ///
 /// [`try2!`]: crate::try2!
 /// [`or_stash`]: OrStash::or_stash
-pub enum StashedResult<'s, T, I>
-{
+pub enum StashedResult<'s, T, I> {
     Ok(T),
     Err(&'s mut StashWithErrors<I>),
 }
@@ -150,8 +144,7 @@ where
     M: core::fmt::Display,
 {
     #[track_caller]
-    fn or_stash(self, stash: &mut ErrorStash<F, M, I>) -> StashedResult<T, I>
-    {
+    fn or_stash(self, stash: &mut ErrorStash<F, M, I>) -> StashedResult<T, I> {
         match self {
             Ok(v) => StashedResult::Ok(v),
             Err(err) => {
@@ -160,29 +153,28 @@ where
                     ErrorStash::Empty(_) => unreachable!(),
                     ErrorStash::WithErrors(stash) => StashedResult::Err(stash),
                 }
-            },
+            }
         }
     }
 }
 
 impl<I, T, E> OrStash<StashWithErrors<I>, I, T> for Result<T, E>
-where E: Into<I>
+where
+    E: Into<I>,
 {
     #[track_caller]
-    fn or_stash(self, stash: &mut StashWithErrors<I>) -> StashedResult<T, I>
-    {
+    fn or_stash(self, stash: &mut StashWithErrors<I>) -> StashedResult<T, I> {
         match self {
             Ok(v) => StashedResult::Ok(v),
             Err(e) => {
                 stash.push(e);
                 StashedResult::Err(stash)
-            },
+            }
         }
     }
 }
 
-impl<'s, T, E> StashedResult<'s, T, E>
-{
+impl<'s, T, E> StashedResult<'s, T, E> {
     /// Returns `Some(t)` if `self` is `Ok(t)`, `None` otherwise.
     ///
     /// This method is useful to discard the `&mut` borrowing of the
@@ -201,8 +193,7 @@ impl<'s, T, E> StashedResult<'s, T, E>
     /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
     ///
-    /// fn parse_version(major: &str, minor: &str) -> Result<(u32, u32)>
-    /// {
+    /// fn parse_version(major: &str, minor: &str) -> Result<(u32, u32)> {
     ///     let mut errs = ErrorStash::new(|| "Invalid version number");
     ///
     ///     let major = u32::from_str(major)
@@ -240,8 +231,7 @@ impl<'s, T, E> StashedResult<'s, T, E>
     /// ```
     ///
     /// [`or_stash`]: OrStash::or_stash
-    pub fn ok(self) -> Option<T>
-    {
+    pub fn ok(self) -> Option<T> {
         match self {
             StashedResult::Ok(t) => Some(t),
             StashedResult::Err(_) => None,

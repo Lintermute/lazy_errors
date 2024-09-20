@@ -22,8 +22,7 @@ use crate::Error;
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
 "##
 )]
-pub trait OrWrap<T, E>
-{
+pub trait OrWrap<T, E> {
     /// If `self` is `Result::Ok(value)`, returns `Result::Ok(value)`;
     /// if `self` is `Result::Err(e1)`, returns `Result::Err(e2)`
     /// where `e2` is an [`Error`] containing a [`WrappedError`]
@@ -42,21 +41,18 @@ pub trait OrWrap<T, E>
     /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
-    /// fn run(tokens: &[&str]) -> Result<(), Error>
-    /// {
+    /// fn run(tokens: &[&str]) -> Result<(), Error> {
     ///     all_ascii(tokens).or_wrap()
     /// }
     ///
-    /// fn all_ascii(tokens: &[&str]) -> Result<(), String>
-    /// {
+    /// fn all_ascii(tokens: &[&str]) -> Result<(), String> {
     ///     match tokens.iter().find(|s| !s.is_ascii()) {
     ///         None => Ok(()),
     ///         Some(not_ascii) => Err(not_ascii.to_string()),
     ///     }
     /// }
     ///
-    /// fn main()
-    /// {
+    /// fn main() {
     ///     assert!(run(&["foo", "bar"]).is_ok());
     ///
     ///     let err = run(&["foo", "❌", "bar"]).unwrap_err();
@@ -86,14 +82,15 @@ pub trait OrWrap<T, E>
 "##
     )]
     fn or_wrap<I>(self) -> Result<T, Error<I>>
-    where E: Into<I>;
+    where
+        E: Into<I>;
 }
 
-impl<T, E> OrWrap<T, E> for Result<T, E>
-{
+impl<T, E> OrWrap<T, E> for Result<T, E> {
     #[track_caller]
     fn or_wrap<I>(self) -> Result<T, Error<I>>
-    where E: Into<I>
+    where
+        E: Into<I>,
     {
         match self {
             Ok(t) => Ok(t),
