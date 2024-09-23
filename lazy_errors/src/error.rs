@@ -643,10 +643,10 @@ impl<I> ErrorData<I> {
     /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     /// use lazy_errors::surrogate_error_trait::prelude::*;
     ///
-    /// let err = Error::from_message("Something went wrong");
+    /// let err: Error = Error::from_message("Something went wrong");
     /// assert!(err.children().is_empty());
     ///
-    /// let err = Error::wrap("A thing went wrong");
+    /// let err: Error = Error::wrap("A thing went wrong");
     /// let e = match err.children() {
     ///     [e] => e,
     ///     _ => unreachable!(),

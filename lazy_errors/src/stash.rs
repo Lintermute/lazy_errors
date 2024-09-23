@@ -522,10 +522,9 @@ mod tests {
     #[test]
     #[cfg(feature = "eyre")]
     fn stash_debug_fmt_with_errors_eyre() {
-        use crate::prelude::ErrorStash;
+        use crate::prelude::{ErrorStash, Stashable};
 
-        let mut errs = ErrorStash::new(|| "Mock message");
-
+        let mut errs = ErrorStash::<_, _, Stashable>::new(|| "Mock message");
         errs.push(eyre::eyre!("Eyre error"));
 
         let msg = format!("{errs:?}");

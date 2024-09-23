@@ -41,32 +41,32 @@ pub use crate::{IntoEyreReport, IntoEyreResult};
 /// Type alias for [`crate::ErrorStash`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type ErrorStash<F, M> = crate::ErrorStash<F, M, Stashable>;
+pub type ErrorStash<F, M, I = Stashable> = crate::ErrorStash<F, M, I>;
 
 /// Type alias for [`crate::StashWithErrors`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type StashWithErrors = crate::StashWithErrors<Stashable>;
+pub type StashWithErrors<I = Stashable> = crate::StashWithErrors<I>;
 
 /// Type alias for [`crate::Error`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type Error = crate::Error<Stashable>;
+pub type Error<I = Stashable> = crate::Error<I>;
 
 /// Type alias for [`crate::ErrorData`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type ErrorData = crate::ErrorData<Stashable>;
+pub type ErrorData<I = Stashable> = crate::ErrorData<I>;
 
 /// Type alias for [`crate::StashedErrors`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type StashedErrors = crate::StashedErrors<Stashable>;
+pub type StashedErrors<I = Stashable> = crate::StashedErrors<I>;
 
 /// Type alias for [`crate::WrappedError`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
 /// as explained in [the module documentation](module@self).
-pub type WrappedError = crate::WrappedError<Stashable>;
+pub type WrappedError<I = Stashable> = crate::WrappedError<I>;
 
 /// Type alias for [`crate::AdHocError`] to get access to all error types by
 /// importing [`lazy_errors::prelude::*`](module@self).

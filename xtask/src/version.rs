@@ -80,8 +80,8 @@ impl FromStr for MajorMinorPatch {
             .split('.')
             .collect::<Vec<_>>()
             .try_into()
-            .map_err(|_| {
-                Error::from_message("Invalid number of parts separated by '.'")
+            .map_err(|_| -> Error {
+                err!("Invalid number of parts separated by '.'")
             })
             .or_stash(&mut errs));
 
