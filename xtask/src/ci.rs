@@ -30,7 +30,7 @@ pub enum Ci {
     /// - `cargo build` (*)
     /// - `cargo tarpaulin`
     /// - `cargo miri test`
-    /// - `cargo upgrades`
+    /// - `cargo upgrades --locked`
     /// - `cargo update --locked`
     /// - `cargo audit --deny warnings`
     ///
@@ -52,10 +52,10 @@ pub enum Ci {
     /// after compiling/running the tests. They will be run after the steps
     /// marked with `(*)` to defer the `cargo clean` for as long as possible.
     ///
-    /// Finally, when all other steps have succeeded, `cargo upgrades`,
-    /// cargo update --locked`, and `cargo audit` will be run.
-    /// Since checking dependencies requires accessing remote servers,
-    /// we run them last to keep the load on these servers low.
+    /// Finally, when all other steps have succeeded,
+    /// `cargo upgrades --locked`, cargo update --locked`, and `cargo audit`
+    /// will be run. Since checking dependencies requires accessing remote
+    /// servers, we run them last to keep the load on these servers low.
     #[clap(verbatim_doc_comment)]
     All(AllArgs),
 
@@ -98,8 +98,9 @@ pub enum Ci {
 
     /// Runs the dependency checks of the CI quality gate.
     ///
-    /// This command will run `cargo upgrades`, `cargo update --locked`,
-    /// and `cargo audit --deny warnings`.
+    /// This command will run `cargo upgrades --locked`,
+    /// `cargo update --locked`, and
+    /// `cargo audit --deny warnings`.
     Deps,
 }
 
@@ -137,7 +138,8 @@ pub struct AllArgs {
     #[clap(long)]
     skip_miri: bool,
 
-    /// Skip `cargo upgrades`, `cargo update --locked`, and `cargo audit`.
+    /// Skip `cargo upgrades --locked`, `cargo update --locked`, and
+    /// `cargo audit`.
     #[clap(long)]
     skip_dependency_checks: bool,
 
@@ -211,7 +213,8 @@ pub struct QuickArgs {
     )]
     skip_miri: bool,
 
-    /// Skip `cargo upgrades`, `cargo update --locked`, and `cargo audit`.
+    /// Skip `cargo upgrades --locked`, `cargo update --locked`, and
+    /// `cargo audit`.
     ///
     /// This is nice to use on your local machine to keep server load low.
     #[clap(
@@ -663,7 +666,7 @@ fn miri(args: &MiriArgs) -> [CommandLine; 3] {
 }
 
 fn deps() -> [CommandLine; 3] {
-    let upgrades = vec!["cargo", "upgrades"];
+    let upgrades = vec!["cargo", "--locked", "upgrades"];
     let update = vec!["cargo", "--locked", "update"];
     let audit = vec!["cargo", "--locked", "audit", "--deny", "warnings"];
 
@@ -867,7 +870,7 @@ mod tests {
     #[test_case(
         &["xtask", "ci", "deps"],
         &[
-            &["cargo", "upgrades"],
+            &["cargo", "--locked", "upgrades"],
             &["cargo", "--locked", "update"],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
         ]; "`deps` task")]
@@ -965,7 +968,7 @@ mod tests {
                 "--output-dir", "tarpaulin-report-dev",
                 "--", "--include-ignored",
             ],
-            &["cargo", "upgrades"],
+            &["cargo", "--locked", "upgrades"],
             &["cargo", "--locked", "update"],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
         ]; "`quick` tasklist with inverted flags (w/o --skip-moving-targets)")]
@@ -1158,7 +1161,7 @@ mod tests {
                 "--optional-deps",
             ],
             &["cargo", "+nightly", "--locked", "clean"],
-            &["cargo", "upgrades"],
+            &["cargo", "--locked", "upgrades"],
             &["cargo", "--locked", "update" ],
             &["cargo", "--locked", "audit", "--deny", "warnings"],
         ]; "default `all` tasklist")]

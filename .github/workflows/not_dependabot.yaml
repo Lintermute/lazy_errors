@@ -94,7 +94,7 @@ jobs:
       run: cargo --locked audit --deny warnings
 
     - name: Check dependencies for new major/minor versions
-      run: cargo upgrades
+      run: cargo --locked upgrades
 
   build:
     needs: init
