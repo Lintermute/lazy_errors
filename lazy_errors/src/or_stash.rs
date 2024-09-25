@@ -132,6 +132,7 @@ pub trait OrStash<S, I, T> {
 ///
 /// [`try2!`]: crate::try2!
 /// [`or_stash`]: OrStash::or_stash
+#[derive(Debug)]
 pub enum StashedResult<'s, T, I> {
     Ok(T),
     Err(&'s mut StashWithErrors<I>),
