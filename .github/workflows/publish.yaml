@@ -112,4 +112,5 @@ jobs:
       run: >
         cargo publish
         --package lazy_errors
-        --token ${{ secrets.CRATES_IO_API_TOKEN }}
+      env:
+        CARGO_REGISTRY_TOKEN: "${{ secrets.CRATES_IO_API_TOKEN }}"
