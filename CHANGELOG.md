@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Added
+
+- `StashedResult` now implements `Debug` if its type parameters do so too
+
 ## [`v0.8.0`] (2024-09-20)
 
 ### Breaking Changes
