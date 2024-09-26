@@ -176,6 +176,36 @@ where
 }
 
 impl<'s, T, E> StashedResult<'s, T, E> {
+    /// Counterpart to [`Result::map`]:
+    ///
+    /// ```
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
+    /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+    ///
+    /// let mut errs = ErrorStash::new(|| "There were one or more errors");
+    ///
+    /// let r: StashedResult<()> = errs.ok();
+    /// let r: StashedResult<u8> = r.map(|()| 42);
+    /// assert!(matches!(r, StashedResult::Ok(42)));
+    ///
+    /// errs.push("An error");
+    /// let r: StashedResult<()> = errs.ok();
+    /// let r: StashedResult<u8> = r.map(|()| 42);
+    /// assert!(matches!(r, StashedResult::Err(_)));
+    /// ```
+    pub fn map<U, F>(self, f: F) -> StashedResult<'s, U, E>
+    where
+        F: FnOnce(T) -> U,
+    {
+        match self {
+            StashedResult::Ok(t) => StashedResult::Ok(f(t)),
+            StashedResult::Err(stash) => StashedResult::Err(stash),
+        }
+    }
+
     /// Returns `Some(t)` if `self` is `Ok(t)`, `None` otherwise.
     ///
     /// This method is useful to discard the `&mut` borrowing of the

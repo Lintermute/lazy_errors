@@ -13,6 +13,7 @@ This file documents all changes affecting the [semver] version of this project.
 ### Added
 
 - `StashedResult` now implements `Debug` if its type parameters do so too
+- Added `StashedResult::map` (`Result::map` counterpart)
 
 ## [`v0.8.0`] (2024-09-20)
 
