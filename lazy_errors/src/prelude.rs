@@ -31,12 +31,15 @@
 //! [_inner error type_ `I`]: crate::Error#inner-error-type-i
 //! [CUSTOM]: crate#example-custom-error-types
 
-pub use crate::{
-    err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashedResult,
-};
+pub use crate::{err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith};
 
 #[cfg(feature = "eyre")]
 pub use crate::{IntoEyreReport, IntoEyreResult};
+
+/// Type alias for [`crate::StashedResult`]
+/// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
+/// as explained in [the module documentation](module@self).
+pub type StashedResult<'a, T> = crate::StashedResult<'a, T, Stashable>;
 
 /// Type alias for [`crate::ErrorStash`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),
