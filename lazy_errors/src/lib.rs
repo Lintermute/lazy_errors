@@ -303,68 +303,6 @@
 //! }
 //! ```
 //!
-//! ### Example: `into_eyre_*`
-//!
-//! [`ErrorStash`] and [`StashWithErrors`] can be converted into
-//! [`Result`] and [`Error`], respectively. A similar, albeit lossy,
-//! conversion from [`ErrorStash`] and [`StashWithErrors`] exist for
-//! `eyre::Result` and `eyre::Error` (i.e. `eyre::Report`), namely
-#![cfg_attr(
-    not(feature = "eyre"),
-    doc = "`into_eyre_result` and `into_eyre_report`."
-)]
-#![cfg_attr(
-    feature = "eyre",
-    doc = r##"[`into_eyre_result`](IntoEyreResult::into_eyre_result) and
-[`into_eyre_report`](IntoEyreReport::into_eyre_report):
-
-```
-# use lazy_errors::doctest_line_num_helper as replace_line_numbers;
-use lazy_errors::prelude::*;
-use eyre::bail;
-
-fn run() -> Result<(), eyre::Report>
-{
-    let r = write("❌").or_create_stash::<Stashable>(|| "Failed to run");
-    match r {
-        Ok(()) => Ok(()),
-        Err(mut stash) => {
-            cleanup().or_stash(&mut stash);
-            bail!(stash.into_eyre_report());
-        },
-    }
-}
-
-fn write(text: &str) -> Result<(), Error>
-{
-    if !text.is_ascii() {
-        return Err(err!("Input is not ASCII: '{text}'"));
-    }
-    Ok(())
-}
-
-fn cleanup() -> Result<(), Error>
-{
-    Err(err!("Cleanup failed"))
-}
-
-fn main()
-{
-    let err = run().unwrap_err();
-    let printed = format!("{err:#}");
-    let printed = replace_line_numbers(&printed);
-    assert_eq!(printed, indoc::indoc! {"
-        Failed to run
-        - Input is not ASCII: '❌'
-          at src/lib.rs:1234:56
-          at src/lib.rs:1234:56
-        - Cleanup failed
-          at src/lib.rs:1234:56
-          at src/lib.rs:1234:56"});
-}
-```
-"##
-)]
 //! ### Example: Hierarchies
 //!
 //! As you might have noticed, [`Error`]s form hierarchies:
@@ -468,6 +406,64 @@ fn main()
 //! However, the error tree can have almost any
 //! [_inner error type_](Error#inner-error-type-i) as leaf.
 //!
+//! ### Example: `into_eyre_*`
+//!
+//! [`ErrorStash`] and [`StashWithErrors`] can be converted into
+//! [`Result`] and [`Error`], respectively. A similar, albeit lossy,
+//! conversion from [`ErrorStash`] and [`StashWithErrors`] exist for
+//! `eyre::Result` and `eyre::Error` (i.e. `eyre::Report`), namely
+#![cfg_attr(
+    not(feature = "eyre"),
+    doc = "`into_eyre_result` and `into_eyre_report`."
+)]
+#![cfg_attr(
+    feature = "eyre",
+    doc = r##"[`into_eyre_result`](IntoEyreResult::into_eyre_result) and
+[`into_eyre_report`](IntoEyreReport::into_eyre_report):
+
+```
+# use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+use eyre::bail;
+use lazy_errors::prelude::*;
+
+fn run() -> Result<(), eyre::Report> {
+    let r = write("❌").or_create_stash::<Stashable>(|| "Failed to run");
+    match r {
+        Ok(()) => Ok(()),
+        Err(mut stash) => {
+            cleanup().or_stash(&mut stash);
+            bail!(stash.into_eyre_report());
+        }
+    }
+}
+
+fn write(text: &str) -> Result<(), Error> {
+    if !text.is_ascii() {
+        return Err(err!("Input is not ASCII: '{text}'"));
+    }
+    Ok(())
+}
+
+fn cleanup() -> Result<(), Error> {
+    Err(err!("Cleanup failed"))
+}
+
+fn main() {
+    let err = run().unwrap_err();
+    let printed = format!("{err:#}");
+    let printed = replace_line_numbers(&printed);
+    assert_eq!(printed, indoc::indoc! {"
+        Failed to run
+        - Input is not ASCII: '❌'
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56
+        - Cleanup failed
+          at src/lib.rs:1234:56
+          at src/lib.rs:1234:56"});
+}
+```
+"##
+)]
 //! ### Supported Error Types
 #![cfg_attr(
     any(feature = "rust-v1.81", feature = "std"),
