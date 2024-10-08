@@ -188,7 +188,7 @@ where
 
     /// Adds an error into the stash.
     #[track_caller]
-    pub fn push<E>(&mut self, err: E)
+    pub fn push<E>(&mut self, err: E) -> &mut StashWithErrors<I>
     where
         E: Into<I>,
     {
@@ -212,6 +212,10 @@ where
         };
 
         *self = ErrorStash::WithErrors(stash_with_errors);
+        match self {
+            ErrorStash::Empty(_) => unreachable!(),
+            ErrorStash::WithErrors(stash_with_errors) => stash_with_errors,
+        }
     }
 
     /// Returns `true` if the stash is empty.
@@ -419,12 +423,13 @@ impl<I> StashWithErrors<I> {
 
     /// Adds an error into the stash.
     #[track_caller]
-    pub fn push<E>(&mut self, err: E)
+    pub fn push<E>(&mut self, err: E) -> &mut StashWithErrors<I>
     where
         E: Into<I>,
     {
         self.errors.push(err.into());
         self.locations.push(error::location());
+        self
     }
 
     /// Returns all errors that have been put into this stash so far.

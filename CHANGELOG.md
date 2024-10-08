@@ -6,6 +6,13 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Breaking Changes
 
+- `push` now returns a value instead of none (i.e. `()`)
+  - `StashWithErrors::push` returns a `&mut StashWithErrors` to `self`
+  - `ErrorStash::push` returns a `&mut StashWithErrors` to
+    the wrapped inner `StashWithErrors` value
+  - Usually, this update does not require changes to your code,
+    except in some cases where you need to drop the return value explicitly,
+    for example in `match` statements
 - `StashedResult`, when imported from any of the two preludes,
   now has its generic inner error type parameter hardcoded
   as the respective `Stashable` type from that prelude
