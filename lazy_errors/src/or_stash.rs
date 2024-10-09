@@ -1,4 +1,4 @@
-use crate::{ErrorStash, StashWithErrors};
+use crate::{stash::ErrorSink, StashWithErrors};
 
 /// Adds the [`or_stash`](Self::or_stash) method on `Result<_, E>`,
 /// if `E` implements [`Into<I>`](crate::Error#inner-error-type-i).
@@ -114,7 +114,8 @@ pub trait OrStash<S, I, T> {
 ///
 /// Note that the error variant is [`&mut StashWithErrors`][StashWithErrors].
 /// When `StashedResult` is returned from [`or_stash`],
-/// it actually borrows the inner value from the [`&mut ErrorStash`][ErrorStash]
+/// it actually borrows the inner value from
+/// the [`&mut ErrorStash`][crate::ErrorStash]
 /// that was passed to [`or_stash`].
 /// Thus, if you want to keep the results of multiple [`or_stash`] calls
 /// around at the same time, in order to extract their `Ok(t)` values later,
@@ -130,6 +131,7 @@ pub trait OrStash<S, I, T> {
 /// `StashedResult` is returned from [`or_stash`].
 /// There should be no need to create values of this type manually.
 ///
+/// [`ErrorStash`]: crate::ErrorStash
 /// [`try2!`]: crate::try2!
 /// [`or_stash`]: OrStash::or_stash
 #[derive(Debug)]
@@ -138,39 +140,16 @@ pub enum StashedResult<'s, T, I> {
     Err(&'s mut StashWithErrors<I>),
 }
 
-impl<F, M, I, T, E> OrStash<ErrorStash<F, M, I>, I, T> for Result<T, E>
+impl<T, E, S, I> OrStash<S, I, T> for Result<T, E>
 where
     E: Into<I>,
-    F: FnOnce() -> M,
-    M: core::fmt::Display,
+    S: ErrorSink<E, I>,
 {
     #[track_caller]
-    fn or_stash(self, stash: &mut ErrorStash<F, M, I>) -> StashedResult<T, I> {
+    fn or_stash(self, stash: &mut S) -> StashedResult<T, I> {
         match self {
             Ok(v) => StashedResult::Ok(v),
-            Err(err) => {
-                stash.push(err);
-                match stash {
-                    ErrorStash::Empty(_) => unreachable!(),
-                    ErrorStash::WithErrors(stash) => StashedResult::Err(stash),
-                }
-            }
-        }
-    }
-}
-
-impl<I, T, E> OrStash<StashWithErrors<I>, I, T> for Result<T, E>
-where
-    E: Into<I>,
-{
-    #[track_caller]
-    fn or_stash(self, stash: &mut StashWithErrors<I>) -> StashedResult<T, I> {
-        match self {
-            Ok(v) => StashedResult::Ok(v),
-            Err(e) => {
-                stash.push(e);
-                StashedResult::Err(stash)
-            }
+            Err(err) => StashedResult::Err(stash.stash(err)),
         }
     }
 }
@@ -231,6 +210,7 @@ impl<'s, T, E> StashedResult<'s, T, E> {
     /// );
     /// ```
     ///
+    /// [`ErrorStash`]: crate::ErrorStash
     /// [`or_stash`]: OrStash::or_stash
     pub fn ok(self) -> Option<T> {
         match self {

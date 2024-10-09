@@ -11,6 +11,19 @@ use crate::{
     Error, StashedResult,
 };
 
+/// Something to push (“stash”) errors into.
+///
+/// This trait is implemented by [`ErrorStash`] and [`StashWithErrors`]
+/// and serves to deduplicate internal logic that needs to work with
+/// either of these types.
+pub trait ErrorSink<E, I>
+where
+    E: Into<I>,
+{
+    /// Appends an error to this list of errors.
+    fn stash(&mut self, error: E) -> &mut StashWithErrors<I>;
+}
+
 /// A builder for [`Error`] that keeps a list of errors
 /// which may still be empty, along with a message that summarizes
 /// all errors that end up in the list.
@@ -152,6 +165,28 @@ where
 impl<I> Display for StashWithErrors<I> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         display(f, self.errors())
+    }
+}
+
+impl<E, F, M, I> ErrorSink<E, I> for ErrorStash<F, M, I>
+where
+    E: Into<I>,
+    F: FnOnce() -> M,
+    M: Display,
+{
+    #[track_caller]
+    fn stash(&mut self, err: E) -> &mut StashWithErrors<I> {
+        self.push(err)
+    }
+}
+
+impl<E, I> ErrorSink<E, I> for StashWithErrors<I>
+where
+    E: Into<I>,
+{
+    #[track_caller]
+    fn stash(&mut self, err: E) -> &mut StashWithErrors<I> {
+        self.push(err)
     }
 }
 
