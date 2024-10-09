@@ -483,68 +483,23 @@ fn display<I>(f: &mut fmt::Formatter<'_>, errors: &[I]) -> fmt::Result {
 
 #[cfg(test)]
 mod tests {
-    use core::fmt::Debug;
-
-    use crate::{Error, ErrorStash};
-
-    #[test]
     #[cfg(any(feature = "rust-v1.81", feature = "std"))]
-    fn stash_debug_fmt_when_empty_std() {
-        use crate::prelude::Stashable;
-        stash_debug_fmt_when_empty::<Stashable>()
-    }
+    use crate::prelude::*;
+
+    #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+    use crate::surrogate_error_trait::prelude::*;
 
     #[test]
-    fn stash_debug_fmt_when_empty_surrogate() {
-        use crate::surrogate_error_trait::prelude::Stashable;
-        stash_debug_fmt_when_empty::<Stashable>()
-    }
-
-    fn stash_debug_fmt_when_empty<I: Debug>() {
-        let errs = ErrorStash::<_, _, I>::new(|| "Mock message");
-
+    fn stash_debug_fmt_when_empty() {
+        let errs = ErrorStash::new(|| "Mock message");
         assert_eq!(format!("{errs:?}"), "ErrorStash(Empty)");
     }
 
     #[test]
-    #[cfg(any(feature = "rust-v1.81", feature = "std"))]
-    fn stash_debug_fmt_with_errors_std() {
-        use crate::prelude::Stashable;
-        stash_debug_fmt_with_errors::<Stashable>()
-    }
-
-    #[test]
-    fn stash_debug_fmt_with_errors_surrogate() {
-        use crate::surrogate_error_trait::prelude::Stashable;
-        stash_debug_fmt_with_errors::<Stashable>()
-    }
-
-    #[test]
-    #[cfg(feature = "eyre")]
-    fn stash_debug_fmt_with_errors_eyre() {
-        use crate::prelude::ErrorStash;
-
+    fn stash_debug_fmt_with_errors() {
         let mut errs = ErrorStash::new(|| "Mock message");
-
-        errs.push(eyre::eyre!("Eyre error"));
-
-        let msg = format!("{errs:?}");
-        dbg!(&msg);
-
-        assert!(msg.contains("Eyre error"));
-        assert!(msg.contains("lazy_errors"));
-        assert!(msg.contains("stash.rs"));
-    }
-
-    fn stash_debug_fmt_with_errors<'a, I>()
-    where
-        I: Debug,
-        Error<I>: Into<I>,
-        &'a str: Into<I>,
-    {
-        let mut errs = ErrorStash::<_, _, I>::new(|| "Mock message");
         errs.push("First error");
-        errs.push(Error::<I>::from_message("Second error"));
+        errs.push(Error::from_message("Second error"));
 
         let msg = format!("{errs:?}");
         dbg!(&msg);
@@ -555,6 +510,21 @@ mod tests {
         assert!(msg.contains("First error"));
         assert!(msg.contains("Second error"));
 
+        assert!(msg.contains("lazy_errors"));
+        assert!(msg.contains("stash.rs"));
+    }
+
+    #[cfg(feature = "eyre")]
+    #[test]
+    fn stash_debug_fmt_with_errors_eyre() {
+        let mut errs = ErrorStash::new(|| "Mock message");
+
+        errs.push(eyre::eyre!("Eyre error"));
+
+        let msg = format!("{errs:?}");
+        dbg!(&msg);
+
+        assert!(msg.contains("Eyre error"));
         assert!(msg.contains("lazy_errors"));
         assert!(msg.contains("stash.rs"));
     }
