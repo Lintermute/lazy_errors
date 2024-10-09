@@ -4,6 +4,16 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Breaking Changes
+
+- `StashedResult`, when imported from any of the two preludes,
+  now has its generic inner error type parameter hardcoded
+  as the respective `Stashable` type from that prelude
+
+### Added
+
+- `StashedResult` now implements `Debug` if its type parameters do so too
+
 ## [`v0.8.0`] (2024-09-20)
 
 ### Breaking Changes
