@@ -85,19 +85,33 @@ impl FromStr for MajorMinorPatch {
             })
             .or_stash(&mut errs));
 
-        let [major, minor, patch] = tokens.map(|tok| {
-            u16::from_str(tok)
-                .map_err(|_| -> Error { err!("Not a valid number: '{s}'") })
-                .or_stash(&mut errs)
-                .ok()
-        });
+        // TODO: Add try_collect_or_stash() to replace
+        // `let x = iter.filter_map(…).collect(); try2!(errs.ok()); Ok(x)`.
+        let tokens = tokens
+            .into_iter()
+            .filter_map(|t| {
+                u16::from_str(t)
+                    .map_err(|_| -> Error { err!("Invalid number: '{t}'") })
+                    .or_stash(&mut errs)
+                    .ok()
+            })
+            .collect::<Vec<_>>();
+        try2!(errs.ok());
 
-        errs.into_result()?;
+        // By staying with [_; n] instead of Vec we could get rid of that block.
+        //
+        // TODO: Similar to `array::try_map`, we could add a matching
+        // `array::try_map_or_stash` (similar to `try_collect_or_stash`).
+        // https://github.com/rust-lang/rust/issues/79711
+        let Ok([major, minor, patch]): Result<[u16; 3], _> = tokens.try_into()
+        else {
+            return Err(err!("Internal error: Version number parts got lost?"));
+        };
 
         Ok(Self {
-            major: major.unwrap(),
-            minor: minor.unwrap(),
-            patch: patch.unwrap(),
+            major,
+            minor,
+            patch,
         })
     }
 }
@@ -240,6 +254,18 @@ mod tests {
                 assert_eq!(actual.to_string(), e);
             }
         }
+    }
+
+    #[test]
+    fn parse_major_minor_patch_multiple_err() {
+        let err = super::MajorMinorPatch::from_str("-1.-2.-3").unwrap_err();
+        let msg = format!("{err:#}");
+        eprintln!("{}", msg);
+
+        assert!(msg.starts_with("Doesn't match MAJOR.MINOR.PATCH: '-1.-2.-3'"));
+        assert!(msg.contains("Invalid number: '-1'"));
+        assert!(msg.contains("Invalid number: '-2'"));
+        assert!(msg.contains("Invalid number: '-3'"));
     }
 
     #[test_case("0.0.0", v(0, 0, 0))]
