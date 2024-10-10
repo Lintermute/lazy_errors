@@ -33,6 +33,7 @@
 
 pub use crate::{
     err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashErr,
+    TryCollectOrStash,
 };
 
 #[cfg(feature = "eyre")]

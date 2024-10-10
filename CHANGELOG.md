@@ -19,6 +19,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Added
 
+- Added `try_collect_or_stash` on `Iterator<Item = Result<T, E>>`,
+  which is similar to `try_collect` from the Rust standard library,
+  except that it fails lazily (i.e. it does _not_ short-circuit)
+  and moves all `Err` items into an error stash
 - Added `stash_err` on `Iterator<Item = Result<T, E>>`,
   which turns an `Iterator<Item = Result<T, E>>` into an `Iterator<Item = T>`,
   moving any `E` item into an error stash as soon as it is encountered

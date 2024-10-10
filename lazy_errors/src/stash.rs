@@ -7,6 +7,7 @@ use alloc::{
 };
 
 use crate::{
+    err,
     error::{self, Location},
     Error, StashedResult,
 };
@@ -22,6 +23,52 @@ where
 {
     /// Appends an error to this list of errors.
     fn stash(&mut self, error: E) -> &mut StashWithErrors<I>;
+}
+
+/// Something to read errors from.
+///
+/// This trait is implemented by [`ErrorStash`] and [`StashWithErrors`]
+/// and serves to deduplicate internal logic that needs to work with
+/// either of these types.
+pub trait ErrorSource<I> {
+    /// Returns all errors that have been added to this list so far.
+    fn errors(&self) -> &[I];
+}
+
+/// Something that is/wraps a mutable, empty or non-empty list of errors,
+/// and can be forced to contain at least one error.
+///
+/// This trait is implemented by [`ErrorStash`] and [`StashWithErrors`]
+/// and serves to deduplicate internal logic that needs to work with
+/// either of these types.
+///
+/// Since [`enforce_errors`] returns a `&mut StashWithErrors`,
+/// this trait is trivially implemented by `StashWithErrors`.
+/// It's main purpose, however, is to “coerce” a `&mut ErrorStash`
+/// (which is either empty or wraps a `StashWithErrors`)
+/// into a `&mut StashWithErrors`.
+/// When deduplicating internal implementation details of this crate,
+/// we ran into some cases where we know that a given `ErrorStash`
+/// won't be empty, but the type system doesn't.
+/// While it may be tempting to use [`ErrorStash::ok`] instead,
+/// that method returns [`StashedResult<(), _>`]
+/// when what we need may be `StashedResult<T, _>`.
+/// In those cases we usually don't have such a generic `T` value
+/// and can't create it either.
+/// While using `unreachable!()` for `T` would be possible,
+/// using [`enforce_errors`] instead ensures that the crate won't panic.
+///
+/// This trait should _never_ be made part of the crate's API.
+///
+/// [`enforce_errors`]: Self::enforce_errors
+pub trait EnforceErrors<I> {
+    /// If this list of errors is non-empty,
+    /// coerces `&mut self` to [`&mut StashWithErrors`],
+    /// otherwise an internal error will be added to the list first,
+    /// ensuring that it won't be empty anymore.
+    ///
+    /// [`&mut StashWithErrors`]: StashWithErrors
+    fn enforce_errors(&mut self) -> &mut StashWithErrors<I>;
 }
 
 /// A builder for [`Error`] that keeps a list of errors
@@ -168,6 +215,22 @@ impl<I> Display for StashWithErrors<I> {
     }
 }
 
+impl<F, M, I> ErrorSource<I> for ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+{
+    fn errors(&self) -> &[I] {
+        self.errors()
+    }
+}
+
+impl<I> ErrorSource<I> for StashWithErrors<I> {
+    fn errors(&self) -> &[I] {
+        self.errors()
+    }
+}
+
 impl<E, F, M, I> ErrorSink<E, I> for ErrorStash<F, M, I>
 where
     E: Into<I>,
@@ -187,6 +250,30 @@ where
     #[track_caller]
     fn stash(&mut self, err: E) -> &mut StashWithErrors<I> {
         self.push(err)
+    }
+}
+
+impl<F, M, I> EnforceErrors<I> for ErrorStash<F, M, I>
+where
+    F: FnOnce() -> M,
+    M: Display,
+    Error<I>: Into<I>,
+{
+    #[track_caller]
+    fn enforce_errors(&mut self) -> &mut StashWithErrors<I> {
+        match self {
+            ErrorStash::Empty(_) => self.stash(err!("INTERNAL ERROR")),
+            ErrorStash::WithErrors(stash) => stash,
+        }
+    }
+}
+
+impl<I> EnforceErrors<I> for StashWithErrors<I>
+where
+    Error<I>: Into<I>,
+{
+    fn enforce_errors(&mut self) -> &mut StashWithErrors<I> {
+        self
     }
 }
 
@@ -529,6 +616,8 @@ mod tests {
     #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
     use crate::surrogate_error_trait::prelude::*;
 
+    use crate::stash::EnforceErrors;
+
     #[test]
     fn stash_debug_fmt_when_empty() {
         let errs = ErrorStash::new(|| "Mock message");
@@ -567,5 +656,102 @@ mod tests {
         assert!(msg.contains("Eyre error"));
         assert!(msg.contains("lazy_errors"));
         assert!(msg.contains("stash.rs"));
+    }
+
+    #[test]
+    fn error_stash_enforce_errors_modifies_original_stash() {
+        let mut error_stash = ErrorStash::new(|| "Failure");
+        assert_eq!(error_stash.errors().len(), 0);
+
+        {
+            let stash_with_errors = error_stash.enforce_errors();
+            assert_eq!(stash_with_errors.errors().len(), 1);
+            // Drop the mutable borrow
+        }
+
+        assert_eq!(error_stash.errors().len(), 1);
+
+        let err = error_stash.into_result().unwrap_err();
+        let msg = format!("{err}");
+        assert_eq!("Failure: INTERNAL ERROR", &msg);
+    }
+
+    #[test]
+    fn error_stash_enforce_errors_modifies_only_once() {
+        let mut error_stash = ErrorStash::new(|| "Failure");
+        assert_eq!(error_stash.errors().len(), 0);
+
+        error_stash.enforce_errors();
+        assert_eq!(error_stash.errors().len(), 1);
+
+        {
+            let stash_with_errors = error_stash.enforce_errors();
+            assert_eq!(stash_with_errors.errors().len(), 1);
+            // Drop the mutable borrow
+        }
+
+        assert_eq!(error_stash.errors().len(), 1);
+
+        let err = error_stash.into_result().unwrap_err();
+        let msg = format!("{err}");
+        assert_eq!("Failure: INTERNAL ERROR", &msg);
+    }
+
+    #[test]
+    fn error_stash_enforce_errors_does_not_modify_if_nonempty() {
+        let mut error_stash = ErrorStash::new(|| "Failure");
+        assert_eq!(error_stash.errors().len(), 0);
+
+        error_stash.push("External error");
+        assert_eq!(error_stash.errors().len(), 1);
+
+        error_stash.enforce_errors();
+        assert_eq!(error_stash.errors().len(), 1);
+
+        {
+            let stash_with_errors = error_stash.enforce_errors();
+            assert_eq!(stash_with_errors.errors().len(), 1);
+            // Drop the mutable borrow
+        }
+
+        assert_eq!(error_stash.errors().len(), 1);
+
+        let err = error_stash.into_result().unwrap_err();
+        let msg = format!("{err}");
+        assert_eq!("Failure: External error", &msg);
+    }
+
+    #[test]
+    fn stash_with_errors_enforce_errors_modifies_only_once() {
+        let mut error_stash = ErrorStash::new(|| "Failure");
+        assert_eq!(error_stash.errors().len(), 0);
+
+        error_stash.enforce_errors();
+        assert_eq!(error_stash.errors().len(), 1);
+
+        {
+            let stash_with_errors = error_stash.enforce_errors();
+            assert_eq!(stash_with_errors.errors().len(), 1);
+
+            stash_with_errors.enforce_errors();
+            assert_eq!(stash_with_errors.errors().len(), 1);
+
+            // Drop the mutable borrow
+        }
+
+        assert_eq!(error_stash.errors().len(), 1);
+    }
+
+    #[test]
+    fn stash_with_errors_enforce_errors_does_not_modify() {
+        let mut swe = StashWithErrors::from("Failure", "External error");
+        assert_eq!(swe.errors().len(), 1);
+
+        swe.enforce_errors();
+        assert_eq!(swe.errors().len(), 1);
+
+        let err: Error = swe.into();
+        let msg = format!("{err}");
+        assert_eq!("Failure: External error", &msg);
     }
 }

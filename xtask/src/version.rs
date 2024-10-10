@@ -85,18 +85,13 @@ impl FromStr for MajorMinorPatch {
             })
             .or_stash(&mut errs));
 
-        // TODO: Add try_collect_or_stash() to replace
-        // `let x = iter.filter_map(…).collect(); try2!(errs.ok()); Ok(x)`.
-        let tokens = tokens
+        let tokens = try2!(tokens
             .into_iter()
-            .filter_map(|t| {
+            .map(|t| {
                 u16::from_str(t)
                     .map_err(|_| -> Error { err!("Invalid number: '{t}'") })
-                    .or_stash(&mut errs)
-                    .ok()
             })
-            .collect::<Vec<_>>();
-        try2!(errs.ok());
+            .try_collect_or_stash::<Vec<_>>(&mut errs));
 
         // By staying with [_; n] instead of Vec we could get rid of that block.
         //

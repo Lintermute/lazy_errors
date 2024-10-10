@@ -71,7 +71,20 @@ where
     /// on the resulting `Iterator<Item = T>` before calling
     /// [`Iterator::collect`], [`Iterator::fold`], or a similar method.
     ///
+    /// When using `stash_err` together with `collect`,
+    /// there will be no indication of whether
+    /// the iterator contained any `Err` items:
+    /// all `Err` items will simply be moved into the error stash.
+    /// If you don't need to chain any methods between calling
+    /// `stash_err` and `collect`, or if
+    /// you need `collect` to fail (lazily) if
+    /// the iterator contained any `Err` items,
+    /// you can call [`try_collect_or_stash`]
+    /// on `Iterator<Item = Result<…>>` instead.
+    ///
     /// [`stash_err`]: Self::stash_err
+    /// [`try_collect_or_stash`]:
+    /// crate::TryCollectOrStash::try_collect_or_stash
     fn stash_err(self, stash: &mut S) -> StashErrIter<Self, T, E, S, I>
     where
         Self: Sized,

@@ -12,31 +12,35 @@
 //! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
 //! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
 //!
-//! fn run(input1: &str, input2: &str) -> Result<()> {
+//! fn run(input: &[&str]) -> Result<()> {
 //!     let mut errs = ErrorStash::new(|| "There were one or more errors");
 //!
 //!     u8::from_str("42").or_stash(&mut errs); // `errs` contains 0 errors
-//!     u8::from_str("❌").or_stash(&mut errs); // `errs` contains 1 error
-//!     u8::from_str("1337").or_stash(&mut errs); // `errs` contains 2 errors
+//!     u8::from_str("1337").or_stash(&mut errs); // `errs` contains 1 errors
 //!
-//!     // `input1` is very important in this example,
-//!     // so make sure it has a nice message.
-//!     let r: Result<u8> = u8::from_str(input1)
-//!         .or_wrap_with(|| format!("Input '{input1}' is invalid"));
+//!     let numbers = input
+//!         .iter()
+//!         .map(|&text| -> Result<u8> {
+//!             u8::from_str(text)
+//!                 // Make sure validation produces nicer error messages:
+//!                 .or_wrap_with(|| format!("Input '{text}' is invalid"))
+//!         })
+//!         // Fail lazily after collecting all errors:
+//!         .try_collect_or_stash(&mut errs);
 //!
-//!     // If `input1` is invalid, we don't want to continue
+//!     // If any item in `input` is invalid, we don't want to continue
 //!     // but return _all_ errors that have occurred so far.
-//!     let input1: u8 = try2!(r.or_stash(&mut errs));
-//!     println!("input1 = {input1:#X}");
+//!     let numbers: Vec<u8> = try2!(numbers);
 //!
-//!     // Continue handling other `Result`s.
-//!     u8::from_str(input2).or_stash(&mut errs);
+//!     println!("input = {numbers:?}");
+//!
+//!     u8::from_str("-1").or_stash(&mut errs);
 //!
 //!     errs.into() // `Ok(())` if `errs` is still empty, `Err` otherwise
 //! }
 //!
 //! fn main() {
-//!     let err = run("❓", "❗").unwrap_err();
+//!     let err = run(&["❓", "42", "❗"]).unwrap_err();
 //!     let n = err.children().len();
 //!     eprintln!("Got an error with {n} children.");
 //!     eprintln!("---------------------------------------------------------");
@@ -50,13 +54,16 @@
 //! Got an error with 3 children.
 //! ---------------------------------------------------------
 //! There were one or more errors
-//! - invalid digit found in string
-//!   at src/main.rs:10:24
 //! - number too large to fit in target type
-//!   at src/main.rs:11:26
+//!   at src/main.rs:9:26
 //! - Input '❓' is invalid: invalid digit found in string
-//!   at src/main.rs:16:10
-//!   at src/main.rs:20:30
+//!   at src/main.rs:16:18
+//!   at lazy_errors/src/try_collect_or_stash.rs:148:35
+//!   at lazy_errors/src/stash_err.rs:145:46
+//! - Input '❗' is invalid: invalid digit found in string
+//!   at src/main.rs:16:18
+//!   at lazy_errors/src/try_collect_or_stash.rs:148:35
+//!   at lazy_errors/src/stash_err.rs:145:46
 //! ```
 //!
 //! # In a Nutshell
@@ -336,6 +343,51 @@
 //!
 //! let numbers = parse_input().unwrap();
 //! assert_eq!(&numbers, &[1, 42]);
+//! ```
+//!
+//! ### Example: `try_collect_or_stash` on [`Iterator`]
+//!
+//! [`try_collect_or_stash`] is a counterpart to [`Iterator::try_collect`]
+//! from the Rust standard library that will _not_ short-circuit,
+//! but instead move all `Err` items into an error stash.
+//! As explained above,
+//! calling [`stash_err`] on [`Iterator<Item = Result<…>>`](Iterator)
+//! will turn a sequence of `Result<T, E>` into a sequence of `T`.
+//! That method is most useful for
+//! chaining another method on the resulting `Iterator<Item = T>`
+//! before calling [`Iterator::collect`].
+//! Furthermore, when using `stash_err` together with `collect`,
+//! there will be no indication of whether
+//! the iterator contained any `Err` items:
+//! all `Err` items will simply be moved into the error stash.
+//! If you don't need to chain any methods between calling
+//! `stash_err` and `collect`, or if
+//! you need `collect` to fail (lazily) if
+//! the iterator contained any `Err` items,
+//! you can call [`try_collect_or_stash`]
+//! on `Iterator<Item = Result<…>>` instead:
+//!
+//! ```
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
+//! use lazy_errors::{prelude::*, Result};
+//!
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn parse_input() -> Result<Vec<u8>> {
+//!     let input = vec![Ok(1), Err("❓"), Ok(42), Err("❗")];
+//!
+//!     let mut errs = ErrorStash::new(|| "Invalid input");
+//!     let numbers: Vec<u8> = try2!(input
+//!         .into_iter()
+//!         .try_collect_or_stash(&mut errs));
+//!
+//!     unreachable!("try2! will bail due to `Err` items in the iterator")
+//! }
+//!
+//! let err = parse_input().unwrap_err();
+//! let msg = format!("{err}");
+//! assert_eq!(msg, "Invalid input (2 errors)");
 //! ```
 //!
 //! ### Example: Hierarchies
@@ -742,6 +794,7 @@ are compatible with other crates.
 //! [`or_wrap`]: crate::OrWrap::or_wrap
 //! [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
 //! [`stash_err`]: crate::StashErr::stash_err
+//! [`try_collect_or_stash`]: crate::TryCollectOrStash::try_collect_or_stash
 #![cfg_attr(
     any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
@@ -777,6 +830,7 @@ mod or_wrap_with;
 mod stash;
 mod stash_err;
 mod try2;
+mod try_collect_or_stash;
 
 pub use error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 pub use or_create_stash::OrCreateStash;
@@ -786,6 +840,7 @@ pub use or_wrap_with::OrWrapWith;
 pub use stash::{ErrorStash, StashWithErrors};
 pub use stash_err::{StashErr, StashErrIter};
 pub use surrogate_error_trait::Reportable;
+pub use try_collect_or_stash::TryCollectOrStash;
 
 #[cfg(feature = "eyre")]
 mod into_eyre;
