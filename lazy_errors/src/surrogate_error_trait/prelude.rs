@@ -46,7 +46,10 @@
 //! [_inner error type_ `I`]: crate::Error#inner-error-type-i
 //! [CUSTOM]: crate#example-custom-error-types
 
-pub use crate::{err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith};
+pub use crate::{
+    err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashErr,
+    TryCollectOrStash, TryMapOrStash,
+};
 
 /// Type alias for [`crate::StashedResult`]
 /// to use a boxed [_inner error type_ `I`](crate::Error#inner-error-type-i),

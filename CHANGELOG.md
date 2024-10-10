@@ -6,12 +6,30 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Breaking Changes
 
+- `push` now returns a value instead of none (i.e. `()`)
+  - `StashWithErrors::push` returns a `&mut StashWithErrors` to `self`
+  - `ErrorStash::push` returns a `&mut StashWithErrors` to
+    the wrapped inner `StashWithErrors` value
+  - Usually, this update does not require changes to your code,
+    except in some cases where you need to drop the return value explicitly,
+    for example in `match` statements
 - `StashedResult`, when imported from any of the two preludes,
   now has its generic inner error type parameter hardcoded
   as the respective `Stashable` type from that prelude
 
 ### Added
 
+- Added `try_map_or_stash` on arrays of type `[T; _]` or `[Result<T, E>>; _]`
+  which is similar to `try_map` from the Rust standard library,
+  except that it fails lazily (i.e. it does _not_ short-circuit)
+  and moves all `Err` elements/results into an error stash
+- Added `try_collect_or_stash` on `Iterator<Item = Result<T, E>>`,
+  which is similar to `try_collect` from the Rust standard library,
+  except that it fails lazily (i.e. it does _not_ short-circuit)
+  and moves all `Err` items into an error stash
+- Added `stash_err` on `Iterator<Item = Result<T, E>>`,
+  which turns an `Iterator<Item = Result<T, E>>` into an `Iterator<Item = T>`,
+  moving any `E` item into an error stash as soon as it is encountered
 - `StashedResult` now implements `Debug` if its type parameters do so too
 
 ## [`v0.8.0`] (2024-09-20)

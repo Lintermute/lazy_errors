@@ -85,19 +85,18 @@ impl FromStr for MajorMinorPatch {
             })
             .or_stash(&mut errs));
 
-        let [major, minor, patch] = tokens.map(|tok| {
-            u16::from_str(tok)
-                .map_err(|_| -> Error { err!("Not a valid number: '{s}'") })
-                .or_stash(&mut errs)
-                .ok()
-        });
-
-        errs.into_result()?;
+        let [major, minor, patch]: [u16; 3] = try2!(tokens.try_map_or_stash(
+            |token| {
+                u16::from_str(token)
+                    .map_err(|_| -> Error { err!("Invalid number: '{token}'") })
+            },
+            &mut errs
+        ));
 
         Ok(Self {
-            major: major.unwrap(),
-            minor: minor.unwrap(),
-            patch: patch.unwrap(),
+            major,
+            minor,
+            patch,
         })
     }
 }
@@ -240,6 +239,18 @@ mod tests {
                 assert_eq!(actual.to_string(), e);
             }
         }
+    }
+
+    #[test]
+    fn parse_major_minor_patch_multiple_err() {
+        let err = super::MajorMinorPatch::from_str("-1.-2.-3").unwrap_err();
+        let msg = format!("{err:#}");
+        eprintln!("{}", msg);
+
+        assert!(msg.starts_with("Doesn't match MAJOR.MINOR.PATCH: '-1.-2.-3'"));
+        assert!(msg.contains("Invalid number: '-1'"));
+        assert!(msg.contains("Invalid number: '-2'"));
+        assert!(msg.contains("Invalid number: '-3'"));
     }
 
     #[test_case("0.0.0", v(0, 0, 0))]
