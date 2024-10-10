@@ -390,6 +390,44 @@
 //! assert_eq!(msg, "Invalid input (2 errors)");
 //! ```
 //!
+//! ### Example: `try_map_or_stash` on arrays
+//!
+//! [`try_map_or_stash`] is a counterpart to [`array::try_map`]
+//! from the Rust standard library that will _not_ short-circuit,
+//! but instead move all `Err` elements/results into an error stash.
+//! It will touch _all_ elements of arrays
+//! of type `[T; _]` or `[Result<T, E>; _]`,
+//! mapping _each_ `T` or `Ok(T)` via the supplied mapping function.
+//! Each time an `Err` element is encountered
+//! or an element is mapped to an `Err` value,
+//! that error will be put into the supplied error stash:
+//!
+//! ```
+//! # use core::str::FromStr;
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
+//! use lazy_errors::{prelude::*, Result};
+//!
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! let mut errs = ErrorStash::new(|| "Invalid input");
+//!
+//! let input1: [Result<&str, &str>; 3] = [Ok("1"), Ok("42"), Ok("3")];
+//! let input2: [Result<&str, &str>; 3] = [Ok("1"), Err("42"), Ok("42")];
+//! let input3: [&str; 3] = ["1", "foo", "bar"];
+//!
+//! let numbers = input1.try_map_or_stash(u8::from_str, &mut errs);
+//! let numbers = numbers.ok().unwrap();
+//! assert_eq!(numbers, [1, 42, 3]);
+//!
+//! let _ = input2.try_map_or_stash(u8::from_str, &mut errs);
+//! let _ = input3.try_map_or_stash(u8::from_str, &mut errs);
+//!
+//! let err = errs.into_result().unwrap_err();
+//! let msg = format!("{err}");
+//! assert_eq!(msg, "Invalid input (3 errors)");
+//! ```
+//!
 //! ### Example: Hierarchies
 //!
 //! As you might have noticed, [`Error`]s form hierarchies:
@@ -795,6 +833,7 @@ are compatible with other crates.
 //! [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
 //! [`stash_err`]: crate::StashErr::stash_err
 //! [`try_collect_or_stash`]: crate::TryCollectOrStash::try_collect_or_stash
+//! [`try_map_or_stash`]: crate::TryMapOrStash::try_map_or_stash
 #![cfg_attr(
     any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
@@ -831,6 +870,7 @@ mod stash;
 mod stash_err;
 mod try2;
 mod try_collect_or_stash;
+mod try_map_or_stash;
 
 pub use error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
 pub use or_create_stash::OrCreateStash;
@@ -841,6 +881,7 @@ pub use stash::{ErrorStash, StashWithErrors};
 pub use stash_err::{StashErr, StashErrIter};
 pub use surrogate_error_trait::Reportable;
 pub use try_collect_or_stash::TryCollectOrStash;
+pub use try_map_or_stash::TryMapOrStash;
 
 #[cfg(feature = "eyre")]
 mod into_eyre;

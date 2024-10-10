@@ -48,7 +48,7 @@
 
 pub use crate::{
     err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashErr,
-    TryCollectOrStash,
+    TryCollectOrStash, TryMapOrStash,
 };
 
 /// Type alias for [`crate::StashedResult`]

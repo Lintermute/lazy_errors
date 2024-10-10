@@ -118,7 +118,11 @@ where
     /// call a method _before_ collecting all `T` items,
     /// take a look at [`stash_err`](crate::StashErr::stash_err).
     ///
+    /// If you want to map elements of a fixed-size array in a similar manner,
+    /// take a look at [`try_map_or_stash`].
+    ///
     /// [`ErrorStash::ok`]: crate::ErrorStash::ok
+    /// [`try_map_or_stash`]: crate::TryMapOrStash::try_map_or_stash
     fn try_collect_or_stash<C>(self, stash: &mut S) -> StashedResult<C, I>
     where
         C: FromIterator<T>;

@@ -85,23 +85,13 @@ impl FromStr for MajorMinorPatch {
             })
             .or_stash(&mut errs));
 
-        let tokens = try2!(tokens
-            .into_iter()
-            .map(|t| {
-                u16::from_str(t)
-                    .map_err(|_| -> Error { err!("Invalid number: '{t}'") })
-            })
-            .try_collect_or_stash::<Vec<_>>(&mut errs));
-
-        // By staying with [_; n] instead of Vec we could get rid of that block.
-        //
-        // TODO: Similar to `array::try_map`, we could add a matching
-        // `array::try_map_or_stash` (similar to `try_collect_or_stash`).
-        // https://github.com/rust-lang/rust/issues/79711
-        let Ok([major, minor, patch]): Result<[u16; 3], _> = tokens.try_into()
-        else {
-            return Err(err!("Internal error: Version number parts got lost?"));
-        };
+        let [major, minor, patch]: [u16; 3] = try2!(tokens.try_map_or_stash(
+            |token| {
+                u16::from_str(token)
+                    .map_err(|_| -> Error { err!("Invalid number: '{token}'") })
+            },
+            &mut errs
+        ));
 
         Ok(Self {
             major,

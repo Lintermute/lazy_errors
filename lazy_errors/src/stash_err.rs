@@ -81,10 +81,13 @@ where
     /// the iterator contained any `Err` items,
     /// you can call [`try_collect_or_stash`]
     /// on `Iterator<Item = Result<…>>` instead.
+    /// If you want to map elements of a fixed-size array,
+    /// take a look at [`try_map_or_stash`].
     ///
     /// [`stash_err`]: Self::stash_err
     /// [`try_collect_or_stash`]:
     /// crate::TryCollectOrStash::try_collect_or_stash
+    /// [`try_map_or_stash`]: crate::TryMapOrStash::try_map_or_stash
     fn stash_err(self, stash: &mut S) -> StashErrIter<Self, T, E, S, I>
     where
         Self: Sized,

@@ -19,6 +19,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Added
 
+- Added `try_map_or_stash` on arrays of type `[T; _]` or `[Result<T, E>>; _]`
+  which is similar to `try_map` from the Rust standard library,
+  except that it fails lazily (i.e. it does _not_ short-circuit)
+  and moves all `Err` elements/results into an error stash
 - Added `try_collect_or_stash` on `Iterator<Item = Result<T, E>>`,
   which is similar to `try_collect` from the Rust standard library,
   except that it fails lazily (i.e. it does _not_ short-circuit)
