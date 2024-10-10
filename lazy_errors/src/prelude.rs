@@ -31,7 +31,9 @@
 //! [_inner error type_ `I`]: crate::Error#inner-error-type-i
 //! [CUSTOM]: crate#example-custom-error-types
 
-pub use crate::{err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith};
+pub use crate::{
+    err, try2, OrCreateStash, OrStash, OrWrap, OrWrapWith, StashErr,
+};
 
 #[cfg(feature = "eyre")]
 pub use crate::{IntoEyreReport, IntoEyreResult};

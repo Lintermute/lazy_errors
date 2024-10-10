@@ -19,6 +19,9 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Added
 
+- Added `stash_err` on `Iterator<Item = Result<T, E>>`,
+  which turns an `Iterator<Item = Result<T, E>>` into an `Iterator<Item = T>`,
+  moving any `E` item into an error stash as soon as it is encountered
 - `StashedResult` now implements `Debug` if its type parameters do so too
 
 ## [`v0.8.0`] (2024-09-20)

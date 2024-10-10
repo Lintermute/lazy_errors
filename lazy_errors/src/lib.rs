@@ -173,7 +173,7 @@
 //! to make this approach more ergonomic.
 //! Thus, arguably the most useful method in this crate is [`or_stash`].
 //!
-//! ### Example: `or_stash`
+//! ### Example: `or_stash` on [`Result`]
 //!
 //! [`or_stash`] is arguably the most useful method of this crate.
 //! It becomes available on `Result` as soon as you
@@ -243,7 +243,7 @@
 //! into [`Result`] will yield a `Result::Err` that contains an [`Error`],
 //! the main error type from this crate.
 //!
-//! ### Example: `or_create_stash`
+//! ### Example: `or_create_stash` on [`Result`]
 //!
 //! Sometimes you don't want to create an empty [`ErrorStash`] beforehand.
 //! In that case you can call [`or_create_stash`] on `Result`
@@ -303,6 +303,41 @@
 //! }
 //! ```
 //!
+//! ### Example: `stash_err` on [`Iterator`]
+//!
+//! Quite similarly to calling [`or_stash`] on [`Result`],
+//! you can call [`stash_err`] on [`Iterator<Item = Result<T, E>>`](Iterator)
+//! to turn it into `Iterator<Item = T>`,
+//! moving any `E` item into an error stash as soon as they are encountered:
+//!
+//! ```
+//! #[cfg(any(feature = "rust-v1.81", feature = "std"))]
+//! use lazy_errors::{prelude::*, Result};
+//!
+//! #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+//! use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+//!
+//! fn parse_input() -> Result<Vec<u8>> {
+//!     let mut errs = ErrorStash::new(|| "Invalid input");
+//!
+//!     let input = vec![Ok(1), Err("❓"), Ok(42), Err("❗")];
+//!
+//!     let numbers: Vec<u8> = input
+//!         .into_iter()
+//!         .stash_err(&mut errs)
+//!         .collect();
+//!
+//!     let err = errs.into_result().unwrap_err();
+//!     let msg = format!("{err}");
+//!     assert_eq!(msg, "Invalid input (2 errors)");
+//!
+//!     Ok(numbers)
+//! }
+//!
+//! let numbers = parse_input().unwrap();
+//! assert_eq!(&numbers, &[1, 42]);
+//! ```
+//!
 //! ### Example: Hierarchies
 //!
 //! As you might have noticed, [`Error`]s form hierarchies:
@@ -348,7 +383,7 @@
 //! In practice, you wouldn't write such code.
 //! Instead, you'd probably rely on [`or_wrap`] or [`or_wrap_with`].
 //!
-//! ### Example: Wrapping
+//! ### Example: Wrapping on [`Result`]
 //!
 //! You can use [`or_wrap`] or [`or_wrap_with`] to wrap any value
 //! that can be converted into the
@@ -706,6 +741,7 @@ are compatible with other crates.
 //! [`or_create_stash`]: crate::OrCreateStash::or_create_stash
 //! [`or_wrap`]: crate::OrWrap::or_wrap
 //! [`or_wrap_with`]: crate::OrWrapWith::or_wrap_with
+//! [`stash_err`]: crate::StashErr::stash_err
 #![cfg_attr(
     any(feature = "rust-v1.81", feature = "std"),
     doc = r##"
@@ -739,6 +775,7 @@ mod or_stash;
 mod or_wrap;
 mod or_wrap_with;
 mod stash;
+mod stash_err;
 mod try2;
 
 pub use error::{AdHocError, Error, ErrorData, StashedErrors, WrappedError};
@@ -747,6 +784,7 @@ pub use or_stash::{OrStash, StashedResult};
 pub use or_wrap::OrWrap;
 pub use or_wrap_with::OrWrapWith;
 pub use stash::{ErrorStash, StashWithErrors};
+pub use stash_err::{StashErr, StashErrIter};
 pub use surrogate_error_trait::Reportable;
 
 #[cfg(feature = "eyre")]
