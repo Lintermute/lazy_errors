@@ -6,6 +6,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ### Breaking Changes
 
+- The value wrapped by `Error` (`Box<ErrorData>`) is now private;
+  we already had `Deref`, `AsRef`, and `From` for `ErrorData` in place
 - `push` now returns a value instead of none (i.e. `()`)
   - `StashWithErrors::push` returns a `&mut StashWithErrors` to `self`
   - `ErrorStash::push` returns a `&mut StashWithErrors` to

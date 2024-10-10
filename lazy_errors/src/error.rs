@@ -9,13 +9,11 @@ pub type Location = &'static core::panic::Location<'static>;
 
 /// The primary error type to use when using this crate.
 ///
-/// [`Error`] is a [`Box`] that contains an [`ErrorData`] enum variant.
-/// The enum wraps all kinds of errors
+/// [`Error`] wraps all kinds of errors
 /// that you may want to return from functions.
-/// [`Error`] boxes that enum to avoid introducing overhead on the
-/// happy paths of functions returning `Result<_, Error>`.
+/// The error variants are represented by the [`ErrorData`] enum.
 /// You can access the [`ErrorData`] variants
-/// in [`Error`] via [`Deref`], [`AsRef`], or [`From`]:
+/// from [`Error`] via [`Deref`], [`AsRef`], or [`From`]:
 ///
 /// ```
 /// # use core::str::FromStr;
@@ -171,8 +169,10 @@ pub type Location = &'static core::panic::Location<'static>;
 [`prelude::Stashable`]: crate::surrogate_error_trait::prelude::Stashable
 "##
 )]
+// Box to avoid introducing overhead on the
+// happy paths of functions returning `Result<_, Error>`.
 #[derive(Debug)]
-pub struct Error<I>(pub Box<ErrorData<I>>);
+pub struct Error<I>(Box<ErrorData<I>>);
 
 /// Enum of all kinds of errors that you may want to return
 /// from functions when using this crate.
