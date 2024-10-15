@@ -53,7 +53,7 @@ pub enum Ci {
     /// marked with `(*)` to defer the `cargo clean` for as long as possible.
     ///
     /// Finally, when all other steps have succeeded,
-    /// `cargo upgrades --locked`, cargo update --locked`, and `cargo audit`
+    /// `cargo upgrades --locked`, `cargo update --locked`, and `cargo audit`
     /// will be run. Since checking dependencies requires accessing remote
     /// servers, we run them last to keep the load on these servers low.
     #[clap(verbatim_doc_comment)]
