@@ -124,7 +124,7 @@ where
     _unused: PhantomData<I>,
 }
 
-impl<'a, Iter, T, E, S, I> Iterator for StashErrIter<'a, Iter, T, E, S, I>
+impl<Iter, T, E, S, I> Iterator for StashErrIter<'_, Iter, T, E, S, I>
 where
     Iter: Iterator<Item = Result<T, E>>,
     Iter::Item: OrStash<S, I, T>,

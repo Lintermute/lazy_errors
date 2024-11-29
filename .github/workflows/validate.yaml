@@ -284,6 +284,7 @@ jobs:
       with:
         ref: ${{ matrix.branch }}
 
+    # Install `xtask` using a recent Rust version to avoid build failures.
     # FIXME: `xtask ci build` tries to overwrite its own binary.
     # FIXME: This is not possible on Windows, so install it before running it.
     - name: Install xtask
@@ -294,6 +295,12 @@ jobs:
       with:
         toolchain: ${{ matrix.rust-version }}
         components: clippy
+
+    # Downgrade `Cargo.lock` file format version if necessary. Note that we
+    # nevertheless have to make sure that the file is up-to-date per se.
+    # That is done by the `deps` job above.
+    - name: Delete Cargo.lock to use up-to-date dependencies and correct file format version
+      run: rm Cargo.lock
 
     - name: Run clippy
       run: >

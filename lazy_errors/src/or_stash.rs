@@ -154,7 +154,7 @@ where
     }
 }
 
-impl<'s, T, E> StashedResult<'s, T, E> {
+impl<T, E> StashedResult<'_, T, E> {
     /// Returns `Some(t)` if `self` is `Ok(t)`, `None` otherwise.
     ///
     /// This method is useful to discard the `&mut` borrowing of the
