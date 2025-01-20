@@ -80,10 +80,10 @@ jobs:
     - name: Install stable Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Install cargo-upgrades
+    - name: Install cargo-audit & cargo-upgrades
       uses: taiki-e/install-action@v2
       with:
-        tool: cargo-upgrades
+        tool: cargo-audit, cargo-upgrades
 
     - uses: actions/checkout@v4
       with:
