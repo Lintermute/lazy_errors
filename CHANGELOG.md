@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+## [`v0.10.1`] (2025-02-14)
+
 ### Fixed
 
 - Updated URLs in README to point to current release on docs.rs
@@ -193,6 +195,7 @@ Here's the details:
 
 - Initial release
 
+[`v0.10.1`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.10.1
 [`v0.10.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.10.0
 [`v0.9.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.9.0
 [`v0.8.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.8.0
