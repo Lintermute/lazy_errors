@@ -4,6 +4,12 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Added
+
+- Added `ErrorStash::push_and_convert` which adds an error to the stash
+  and returns the inner `StashWithErrors` by value, which is useful
+  if you want to bail from a function after pushing a final error.
+
 ## [`v0.9.0`] (2024-10-11)
 
 ### Breaking Changes

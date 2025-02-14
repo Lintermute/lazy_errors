@@ -308,7 +308,12 @@ where
         Self::Empty(f)
     }
 
-    /// Adds an error into the stash.
+    /// Adds an error to this stash.
+    ///
+    /// Since the stash is guaranteed to be non-empty afterwards, this method
+    /// returns a mutable reference to the inner [`StashWithErrors`].
+    /// If you need to get that [`StashWithErrors`] by value,
+    /// you can call [`push_and_convert`](Self::push_and_convert) instead.
     #[track_caller]
     pub fn push<E>(&mut self, err: E) -> &mut StashWithErrors<I>
     where
@@ -324,19 +329,59 @@ where
         });
 
         core::mem::swap(self, &mut swap);
+        *self = ErrorStash::WithErrors(swap.push_and_convert(err));
+        match self {
+            ErrorStash::Empty(_) => unreachable!(),
+            ErrorStash::WithErrors(stash_with_errors) => stash_with_errors,
+        }
+    }
 
-        let stash_with_errors = match swap {
+    /// Adds an error to this stash,
+    /// consumes `self`, and returns the inner [`StashWithErrors`] by value.
+    ///
+    /// Usually, you'd want to call [`push`](Self::push) instead,
+    /// which takes a `&mut self` instead of `self`.
+    /// However, `push_and_convert` is more useful in some cases,
+    /// for example if you want to return from a function
+    /// after pushing a final error:
+    ///
+    /// ```
+    /// # use lazy_errors::doctest_line_num_helper as replace_line_numbers;
+    /// #[cfg(any(feature = "rust-v1.81", feature = "std"))]
+    /// use lazy_errors::{prelude::*, Result};
+    ///
+    /// #[cfg(not(any(feature = "rust-v1.81", feature = "std")))]
+    /// use lazy_errors::surrogate_error_trait::{prelude::*, Result};
+    ///
+    /// fn check(bytes: &[u8]) -> Result<()> {
+    ///     let mut errs = ErrorStash::new(|| "Something went wrong");
+    ///
+    ///     // ... Code that may or may not have added errors to `errs` ...
+    ///
+    ///     match bytes {
+    ///         [] => Ok(()),
+    ///         [42] => Ok(()),
+    ///         [1, 3, 7] => Ok(()),
+    ///         _ => {
+    ///             let msg = format!("Invalid bytes: {bytes:?}");
+    ///             let errs: StashWithErrors = errs.push_and_convert(msg);
+    ///             let errs: Error = errs.into();
+    ///             Err(errs)
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    #[track_caller]
+    pub fn push_and_convert<E>(self, err: E) -> StashWithErrors<I>
+    where
+        E: Into<I>,
+    {
+        match self {
             ErrorStash::Empty(f) => StashWithErrors::from(f(), err),
             ErrorStash::WithErrors(mut stash) => {
                 stash.push(err);
                 stash
             }
-        };
-
-        *self = ErrorStash::WithErrors(stash_with_errors);
-        match self {
-            ErrorStash::Empty(_) => unreachable!(),
-            ErrorStash::WithErrors(stash_with_errors) => stash_with_errors,
         }
     }
 
