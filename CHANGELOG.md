@@ -4,6 +4,8 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+## [`v0.10.0`] (2025-02-14)
+
 ### Added
 
 - Added `ErrorStash::push_and_convert` which adds an error to the stash
@@ -187,6 +189,7 @@ Here's the details:
 
 - Initial release
 
+[`v0.10.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.10.0
 [`v0.9.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.9.0
 [`v0.8.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.8.0
 [`v0.7.0`]: https://github.com/Lintermute/lazy_errors/releases/tag/v0.7.0
