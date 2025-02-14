@@ -4,6 +4,10 @@ This file documents all changes affecting the [semver] version of this project.
 
 ## New in this release
 
+### Fixed
+
+- Updated URLs in README to point to current release on docs.rs
+
 ## [`v0.10.0`] (2025-02-14)
 
 ### Added
