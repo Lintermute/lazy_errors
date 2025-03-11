@@ -723,7 +723,7 @@ fn as_feature_flags(
         ],
         Some(RustVersion::V1_69) => &[
             "--version-range=1.69..=1.69",
-            "--exclude-features=default",
+            "--exclude-features=default,eyre",
             "--features=rust-v1.69,rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
             "--exclude-features=rust-v1.81,rust-v1.77",
@@ -732,7 +732,7 @@ fn as_feature_flags(
         ],
         Some(RustVersion::V1_66) => &[
             "--version-range=1.66..=1.66",
-            "--exclude-features=default",
+            "--exclude-features=default,eyre",
             "--features=rust-v1.66,rust-v1.64",
             "--ignore-unknown-features",
             "--exclude-features=rust-v1.81,rust-v1.77,rust-v1.69",
