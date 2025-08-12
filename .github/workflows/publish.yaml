@@ -42,7 +42,7 @@ jobs:
     - name: Configure Git
       run: git config --global core.autocrlf false
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Install stable Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -73,7 +73,7 @@ jobs:
     # Fetch the history of the current HEAD since that date as well,
     # so `git tag --merged` shows which tags are actually part of HEAD.
     # TODO: Use `--shallow-since $DATE` when it's not buggy anymore.
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
