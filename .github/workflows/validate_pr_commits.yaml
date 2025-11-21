@@ -45,7 +45,7 @@ jobs:
         git config --global user.name "GitHub, Runner"
         git config --global core.autocrlf false
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
@@ -91,7 +91,7 @@ jobs:
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
@@ -126,7 +126,7 @@ jobs:
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
@@ -167,7 +167,7 @@ jobs:
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
@@ -210,7 +210,7 @@ jobs:
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
@@ -245,7 +245,7 @@ jobs:
         git config --global user.email "runner@github.com"
         git config --global user.name "GitHub, Runner"
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ github.head_ref }}
         fetch-depth: 0
