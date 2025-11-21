@@ -75,7 +75,7 @@ jobs:
     # Avoid linter errors due to changed line endings
     - run: git config --global core.autocrlf false
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -112,7 +112,7 @@ jobs:
       with:
         tool: cargo-hack
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -144,7 +144,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -176,7 +176,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -212,7 +212,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -241,7 +241,7 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
@@ -280,7 +280,7 @@ jobs:
       with:
         tool: cargo-hack
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
       with:
         ref: ${{ matrix.branch }}
 
